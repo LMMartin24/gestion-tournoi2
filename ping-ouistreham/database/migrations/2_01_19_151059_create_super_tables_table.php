@@ -14,9 +14,9 @@ return new class extends Migration
         Schema::create('super_tables', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tournament_id')->constrained()->onDelete('cascade');
-            $table->string('label'); // ex: "Matinée du Samedi"
-            $table->time('start_time'); // Heure de départ commune
-            $table->integer('max_players_total'); // Limite globale pour ce créneau
+            $table->string('name');            // Nom (ex: Bloc Matin)
+            $table->time('start_time');      // Heure (ex: 09:00)
+            $table->integer('max_players');   // Capacité max du bloc
             $table->timestamps();
         });
     }

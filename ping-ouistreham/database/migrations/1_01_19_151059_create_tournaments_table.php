@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('name');
             $table->date('date');
             $table->string('location');
-            $table->string('contact_email'); // L'adresse mail pour les questions des joueurs
+            $table->string('contact_email')->nullable()->change();
             $table->timestamp('registration_deadline'); // Date de clôture
             $table->boolean('is_published')->default(false); // Pour préparer le tournoi avant de le montrer
             $table->timestamps();

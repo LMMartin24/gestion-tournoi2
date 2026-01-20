@@ -11,8 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('registrations', function (Blueprint $table) {
+        Schema::create('sub_tables', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('super_table_id')->constrained()->onDelete('cascade');
+            $table->string('label');
+            $table->decimal('entry_fee', 8, 2);
+            $table->integer('points_max');
             $table->timestamps();
         });
     }
@@ -22,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('registrations');
+        Schema::dropIfExists('sub_tables');
     }
 };
