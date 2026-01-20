@@ -7,7 +7,6 @@
         </a>
 
         <nav class="hidden xl:flex items-center gap-12 text-xs uppercase tracking-[0.3em] font-[900] text-white">
-            <a href="#" class="text-xl hover:text-indigo-400 transition-colors py-2 border-b-2 border-transparent hover:border-indigo-400">Infos Pratiques</a>
             <a href="{{route('dashboard')}}" class="text-xl hover:text-indigo-400 transition-colors py-2 border-b-2 border-transparent hover:border-indigo-400">Choisir mon tableau</a>
 
             @if (Route::has('login'))

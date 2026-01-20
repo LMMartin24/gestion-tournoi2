@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+
 
 class SubTable extends Model
 {
@@ -18,4 +20,12 @@ class SubTable extends Model
     {
         return $this->belongsTo(SuperTable::class);
     }
+
+    public function users(): BelongsToMany
+    {
+        // On lie les utilisateurs via la table pivot sub_table_user
+        return $this->belongsToMany(User::class, 'sub_table_user')
+                    ->withTimestamps();
+    }
+
 }

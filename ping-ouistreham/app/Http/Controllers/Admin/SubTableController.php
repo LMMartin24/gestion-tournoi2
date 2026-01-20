@@ -48,4 +48,7 @@ class SubTableController extends Controller
         return redirect()->route('admin.sub_tables.create', $superTableId)
                         ->with('success', 'Série supprimée avec succès.');
     }
+    public function subTables() {
+        return $this->belongsToMany(SubTable::class, 'sub_table_user');
+    }
 }

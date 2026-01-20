@@ -15,12 +15,11 @@ class SuperTablesController extends Controller
      */
     public function create(Tournament $tournament)
     {
-        // On charge les SuperTables avec leurs SubTables pour les afficher
-        $superTables = $tournament->superTables()->with('subTables')->orderBy('start_time')->get();
+        // On charge les superTables déjà liées au tournoi pour les afficher à droite
+        $tournament->load('superTables');
 
-        return view('admin.super_tables.create', compact('tournament', 'superTables'));
+        return view('admin.super_tables.create', compact('tournament'));
     }
-
     /**
      * Enregistre un créneau (SuperTable) et son premier tableau (SubTable).
      */

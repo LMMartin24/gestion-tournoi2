@@ -26,6 +26,7 @@ class User extends Authenticatable
         'points',         // Ajouté
         'club',           // Ajouté
         'role',           // Ajouté
+        'coach_id',       // Ajouté
     ];
 
     /**
@@ -49,5 +50,42 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+    /**
+ * Les tableaux (séries) auxquels le joueur est inscrit.
+ */
+    public function subTables(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        // On précise la table pivot 'sub_table_user' créée précédemment
+        return $this->belongsToMany(SubTable::class, 'sub_table_user')
+                    ->withTimestamps();
+    }
+
+    public function users(): BelongsToMany
+        {
+            return $this->belongsToMany(User::class, 'sub_table_user')
+                        ->withTimestamps();
+        }
+
+        /**
+         * Relation vers le bloc horaire parent (SuperTable).
+         */
+    public function superTable(): BelongsTo
+    {
+        return $this->belongsTo(SuperTable::class);
+    }
+
+    // App\Models\User.php
+
+    // Les joueurs dont cet utilisateur est responsable
+    public function students()
+    {
+        return $this->hasMany(User::class, 'coach_id');
+    }
+
+    // L'entraîneur de cet utilisateur
+    public function coach()
+    {
+        return $this->belongsTo(User::class, 'coach_id');
     }
 }

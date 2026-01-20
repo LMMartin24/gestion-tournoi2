@@ -11,12 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('sub_tables', function (Blueprint $table) {
+        // Vérifie bien que le nom ici est sub_table_user (la table de liaison)
+        Schema::create('sub_table_user', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('super_table_id')->constrained()->onDelete('cascade');
-            $table->string('label');
-            $table->decimal('entry_fee', 8, 2);
-            $table->integer('points_max');
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->foreignId('sub_table_id')->constrained()->onDelete('cascade');
             $table->timestamps();
         });
     }
@@ -26,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('sub_tables');
+        Schema::dropIfExists('sub_table_user');
     }
 };
