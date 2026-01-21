@@ -18,19 +18,19 @@
                     @csrf
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="flex flex-col gap-2">
-                            <label class="text-[10px] uppercase font-black text-gray-500 tracking-widest ml-1">Nom du joueur</label>
+                            <label class="text-s uppercase font-black text-white  tracking-widest ml-1">Nom du joueur</label>
                             <input type="text" name="name" required class="bg-black border border-white/10 rounded-xl px-5 py-4 text-white text-sm outline-none focus:border-indigo-500 transition-all">
                         </div>
                         <div class="flex flex-col gap-2">
-                            <label class="text-[10px] uppercase font-black text-gray-500 tracking-widest ml-1">N° Licence</label>
+                            <label class="text-s uppercase font-black text-white  tracking-widest ml-1">N° Licence</label>
                             <input type="text" name="license_number" required class="bg-black border border-white/10 rounded-xl px-5 py-4 text-white text-sm outline-none focus:border-indigo-500 transition-all">
                         </div>
                         <div class="flex flex-col gap-2">
-                            <label class="text-[10px] uppercase font-black text-gray-500 tracking-widest ml-1">Adresse Email</label>
+                            <label class="text-s uppercase font-black text-white  tracking-widest ml-1">Adresse Email</label>
                             <input type="email" name="email" required class="bg-black border border-white/10 rounded-xl px-5 py-4 text-white text-sm outline-none focus:border-indigo-500 transition-all">
                         </div>
                         <div class="flex flex-col gap-2">
-                            <label class="text-[10px] uppercase font-black text-gray-500 tracking-widest ml-1">Mot de passe provisoire</label>
+                            <label class="text-s uppercase font-black text-white  tracking-widest ml-1">Mot de passe provisoire</label>
                             <input type="password" name="password" required class="bg-black border border-white/10 rounded-xl px-5 py-4 text-white text-sm outline-none focus:border-indigo-500 transition-all">
                         </div>
                     </div>
@@ -42,18 +42,18 @@
 
             {{-- LISTE ÉLÈVES --}}
             <div class="mt-12">
-                <h3 class="text-white uppercase font-black italic mb-4 text-sm tracking-widest">Mes élèves enregistrés</h3>
+                <h3 class="text-white text-xl uppercase font-black italic mb-4 text-sm tracking-widest">Mes élèves enregistrés</h3>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     @forelse($myPlayers as $player)
                         <div class="bg-[#0f0f0f] border border-white/5 p-4 rounded-2xl flex justify-between items-center group">
                             <div class="flex flex-col">
-                                <span class="text-white font-bold text-xs uppercase group-hover:text-indigo-400">{{ $player->name }}</span>
-                                <span class="text-gray-600 text-[9px]">{{ $player->email }}</span>
+                                <span class="text-white font-bold text-s uppercase group-hover:text-indigo-400">{{ $player->name }}</span>
+                                <span class="text-gray-600 text-[15px]">{{ $player->email }}</span>
                             </div>
-                            <span class="text-gray-500 text-[10px] font-mono">{{ $player->license_number }}</span>
+                            <span class="text-white  text-s font-mono">{{ $player->license_number }}</span>
                         </div>
                     @empty
-                        <p class="text-gray-500 text-xs uppercase py-8 text-center border border-dashed border-white/10 rounded-2xl col-span-2">Aucun élève</p>
+                        <p class="text-white  text-xs uppercase py-8 text-center border border-dashed border-white/10 rounded-2xl col-span-2">Aucun élève</p>
                     @endforelse
                 </div>
             </div>
@@ -73,7 +73,7 @@
                     <div>
                         <div class="flex justify-between items-start mb-4">
                             <h3 class="text-xl font-black uppercase italic text-white">{{ $table->label }}</h3>
-                            <span class="text-[10px] font-bold px-3 py-1 bg-white/5 rounded-full text-gray-400 border border-white/5">
+                            <span class="text-s font-bold px-3 py-1 bg-white/5 rounded-full text-gray-400 border border-white/5">
                                 {{ $table->points_max }} pts max
                             </span>
                         </div>
@@ -105,7 +105,7 @@
                         <input type="hidden" name="sub_table_id" value="{{ $table->id }}">
                         
                         <div class="flex flex-col gap-2">
-                            <label class="text-[9px] uppercase font-black text-gray-500 tracking-widest ml-1">Sélectionner le joueur</label>
+                            <label class="text-[9px] uppercase font-black text-white  tracking-widest ml-1">Sélectionner le joueur</label>
                             <select name="player_id" class="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-white text-xs font-bold uppercase outline-none focus:border-indigo-500 transition-all cursor-pointer">
                                 <option value="{{ auth()->id() }}">Moi-même (Coach)</option>
                                 @foreach($myPlayers as $player)
@@ -123,7 +123,7 @@
                         @endphp
 
                         <button type="submit" {{ $isSuperFull ? 'disabled' : '' }}
-                            class="w-full mt-4 {{ $isSuperFull ? 'bg-red-900/50 text-gray-400' : 'bg-indigo-600 hover:bg-white hover:text-black text-white' }} font-black uppercase text-[10px] tracking-[0.2em] py-4 rounded-xl transition-all">
+                            class="w-full mt-4 {{ $isSuperFull ? 'bg-red-900/50 text-gray-400' : 'bg-indigo-600 hover:bg-white hover:text-black text-white' }} font-black uppercase text-s tracking-[0.2em] py-4 rounded-xl transition-all">
                             {{ $isSuperFull ? 'Complet (' . $currentTotal . '/' . $table->superTable->max_players . ')' : 'Valider l\'inscription' }}
                         </button>
                     </form>

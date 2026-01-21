@@ -24,9 +24,9 @@
                 @csrf
 
                 <div>
-                    <x-input-label for="email" :value="__('Email')" class="text-gray-50 mb-3 uppercase text-xs tracking-widest font-bold" />
+                    <x-input-label for="email" :value="__('Email')" class="text-white mb-3 uppercase text-xs tracking-widest font-bold" />
                     <x-text-input id="email" 
-                        class="block w-full bg-black/50 border-white/10 text-white placeholder:text-gray-500 rounded-2xl py-4 px-6 focus:ring-indigo-500 focus:border-indigo-500 transition-all" 
+                        class="block w-full bg-black/50 border-white/10 text-white placeholder:text-white rounded-2xl py-4 px-6 focus:ring-indigo-500 focus:border-indigo-500 transition-all" 
                         type="email" name="email" :value="old('email')" 
                         required autofocus autocomplete="username" 
                         placeholder="votre@email.com" />
@@ -35,7 +35,7 @@
 
                 <div>
                     <div class="flex justify-between items-center mb-3">
-                        <x-input-label for="password" :value="__('Mot de passe')" class="text-gray-50 uppercase text-xs tracking-widest font-bold" />
+                        <x-input-label for="password" :value="__('Mot de passe')" class="text-white uppercase text-xs tracking-widest font-bold" />
                         @if (Route::has('password.request'))
                             <a class="text-[10px] md:text-xs uppercase tracking-widest text-indigo-400 hover:text-white transition-all font-bold" href="{{ route('password.request') }}">
                                 {{ __('Oublié ?') }}
@@ -43,7 +43,7 @@
                         @endif
                     </div>
                     <x-text-input id="password" 
-                        class="block w-full bg-black/50 border-white/10 text-white placeholder:text-gray-500 rounded-2xl py-4 px-6 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                        class="block w-full bg-black/50 border-white/10 text-white placeholder:text-white rounded-2xl py-4 px-6 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
                         type="password"
                         name="password"
                         required autocomplete="current-password" 
@@ -52,7 +52,7 @@
                 </div>
 
                 <div class="pt-6">
-                    <button type="submit" class="w-full bg-white text-black font-black uppercase text-xs md:text-sm tracking-[0.3em] py-5 px-10 rounded-full hover:bg-indigo-500 hover:text-white transition-all duration-300 shadow-xl transform hover:-translate-y-1">
+                    <button type="submit" class="w-full hover:bg-white hover:text-black font-black uppercase text-xs md:text-sm tracking-[0.3em] py-5 px-10 rounded-full bg-indigo-500 text-white transition-all duration-300 shadow-xl transform hover:-translate-y-1">
                         {{ __('Se connecter au tableau de bord') }}
                     </button>
                 </div>
