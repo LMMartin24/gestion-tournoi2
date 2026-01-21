@@ -60,7 +60,8 @@ class TableGeneratorController extends Controller
                         $player->name,
                         $player->points,
                         $player->license_number,
-                        $player->email
+                        $player->email,
+                        $player->pivot->created_at->format('d/m/Y H:i')
                     ]);
                 }
                 

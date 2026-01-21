@@ -6,6 +6,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class User extends Authenticatable
 {
@@ -54,11 +56,10 @@ class User extends Authenticatable
     /**
  * Les tableaux (séries) auxquels le joueur est inscrit.
  */
-    public function subTables(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    public function subTables()
     {
-        // On précise la table pivot 'sub_table_user' créée précédemment
-        return $this->belongsToMany(SubTable::class, 'sub_table_user')
-                    ->withTimestamps();
+        return $this->belongsToMany(SubTable::class)
+                    ->withTimestamps(); // <--- AJOUTE CECI
     }
 
     public function users(): BelongsToMany

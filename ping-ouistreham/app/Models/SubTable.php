@@ -27,5 +27,6 @@ class SubTable extends Model
         return $this->belongsToMany(User::class, 'sub_table_user')
                     ->withTimestamps();
     }
+    
 
 }

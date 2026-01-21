@@ -36,14 +36,18 @@
                                 </div>
                                 
                                 <ul class="space-y-2">
-                                    @forelse($subTable->users->sortByDesc('points') as $player)
-                                        <li class="flex justify-between items-center text-[11px] text-gray-300 group">
-                                            <span class="font-bold uppercase">{{ $player->name }}</span>
+                                    @foreach($subTable->users->sortByDesc('points') as $player)
+                                        <li class="flex justify-between items-center text-[11px] text-gray-300 group py-1">
+                                            <div class="flex flex-col">
+                                                <span class="font-bold uppercase">{{ $player->name }}</span>
+                                                {{-- Affichage de la date de sécurité --}}
+                                                <span class="text-[8px] text-gray-600 italic">
+                                                    Inscrit le : {{ $player->pivot->created_at->format('d/m/Y à H:i') }}
+                                                </span>
+                                            </div>
                                             <span class="text-gray-600 font-mono">{{ $player->points }} pts</span>
                                         </li>
-                                    @empty
-                                        <li class="text-gray-700 text-[10px] uppercase font-bold text-center py-2 italic">Aucun inscrit</li>
-                                    @endforelse
+                                    @endforeach
                                 </ul>
                             </div>
                         @endforeach
