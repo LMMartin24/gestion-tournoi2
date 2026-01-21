@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\TournamentController;
 use App\Http\Controllers\Admin\SuperTablesController;
 use App\Http\Controllers\Admin\SubTableController;
 use App\Http\Controllers\Api\FfttController;
+use App\Http\Controllers\Admin\TableGeneratorController;
 
 /*
 |--------------------------------------------------------------------------
@@ -90,6 +91,8 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('super-tables/{superTable}/sub-tables/create', [SubTableController::class, 'create'])->name('sub_tables.create');
     Route::post('super-tables/{superTable}/sub-tables', [SubTableController::class, 'store'])->name('sub_tables.store');
     Route::delete('sub-tables/{subTable}', [SubTableController::class, 'destroy'])->name('sub_tables.destroy'); 
+    Route::get('tournaments/{tournament}/generate', [TableGeneratorController::class, 'index'])->name('tables.index');
+    Route::post('super-tables/{superTable}/generate', [TableGeneratorController::class, 'generate'])->name('tables.generate');
 });
 
 require __DIR__.'/auth.php';
