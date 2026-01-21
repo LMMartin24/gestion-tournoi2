@@ -1,4 +1,4 @@
-<header x-data="{ open: false }" class="absolute top-0 left-0 w-full z-50">
+<header x-data="{ open: false }" class=" top-0 left-0 w-full z-50 bg-[#1a1a1a]">
     <div class="max-w-[3200px] mx-auto px-8 lg:px-16 py-10 flex justify-between items-center">
         
         {{-- LOGO --}}

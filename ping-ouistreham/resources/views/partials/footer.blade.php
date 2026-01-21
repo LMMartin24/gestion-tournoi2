@@ -1,6 +1,6 @@
 <footer class="bg-[#1a1a1a] text-white py-16">
     <div class="max-w-7xl mx-auto px-6 lg:px-12">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-12 border-b border-white/10 pb-12">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-12 border-b border-t pt-10 border-white/10 pb-12">
             <div class="col-span-1">
                 <h3 class="text-2xl font-black mb-6 mt-3 italic">APO Ouistreham</h3>
                 <p class="text-gray-400 max-w-sm leading-relaxed">
