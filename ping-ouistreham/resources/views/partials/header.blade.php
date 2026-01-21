@@ -4,7 +4,7 @@
         {{-- LOGO --}}
         <a href="/" class="text-white font-[1000] tracking-tighter text-3xl md:text-4xl flex items-center gap-4 uppercase italic">
             <span class="bg-indigo-600 w-12 h-12 flex items-center justify-center rounded-xl shadow-lg not-italic text-2xl">🏓</span>
-            <span class="leading-none">Amicale Pongiste <br class="hidden sm:block"> <span class="text-indigo-500">Ouistreham</span></span>
+            <span class="leading-none">AP <span class="text-indigo-500">Ouistreham</span></span>
         </a>
 
         {{-- DESKTOP NAV --}}
@@ -40,8 +40,8 @@
 
         {{-- MOBILE BURGER BUTTON --}}
         <div class="xl:hidden">
-            <button @click="open = !open" class="text-white p-2 relative z-[100]">
-                <svg x-show="!open" class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+            <button @click="open = !open" class="text-white  relative z-[100]">
+                <svg x-show="!open" class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
                 <svg x-show="open" x-cloak class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
