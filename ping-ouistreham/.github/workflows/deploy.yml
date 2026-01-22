@@ -12,7 +12,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1. Installation de Node et compilation des assets (Vite/Tailwind)
+      # 1. Installation et compilation (On se déplace dans le sous-dossier)
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -20,10 +20,11 @@ jobs:
 
       - name: Install NPM dependencies & Build
         run: |
+          cd ping-ouistreham
           npm install
           npm run build
 
-      # 2. Déploiement du dossier compilé (public/build) vers Hostinger via SCP (SSH)
+      # 2. Envoi des assets compilés vers Hostinger
       - name: Upload Build Assets
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -31,10 +32,11 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           port: 65002
-          source: "public/build/"
+          source: "ping-ouistreham/public/build/"
           target: "domains/tournoi-de-oustreham.skopee.fr/public_html/"
+          strip_components: 2 # Enlève 'ping-ouistreham/public/' pour ne garder que 'build'
 
-      # 3. Commandes PHP via SSH
+      # 3. Mise à jour du code PHP via SSH
       - name: Execute SSH Commands
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -46,10 +48,9 @@ jobs:
             cd domains/tournoi-de-oustreham.skopee.fr/public_html
             git pull origin main
             
-            # Utilisation du chemin complet vers composer si nécessaire
+            # On entre dans le dossier Laravel pour les commandes artisan
+            cd ping-ouistreham
             composer install --no-dev --optimize-autoloader
-            
-            # Mise à jour de Laravel
             php artisan migrate --force
             php artisan config:cache
             php artisan route:cache
