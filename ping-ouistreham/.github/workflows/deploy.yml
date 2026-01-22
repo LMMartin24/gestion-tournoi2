@@ -3,7 +3,7 @@ name: Deploy Website
 on:
   push:
     branches:
-      - main # Le déploiement se lance quand on push sur la branche main
+      - main
 
 jobs:
   deploy:
@@ -12,7 +12,30 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy to Hostinger via SSH
+      # 1. Installation de Node et compilation des assets (Vite/Tailwind)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install NPM dependencies & Build
+        run: |
+          npm install
+          npm run build
+
+      # 2. Déploiement du dossier compilé (public/build) vers Hostinger via SCP (SSH)
+      - name: Upload Build Assets
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: 65002
+          source: "public/build/"
+          target: "domains/tournoi-de-oustreham.skopee.fr/public_html/"
+
+      # 3. Commandes PHP via SSH
+      - name: Execute SSH Commands
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -20,9 +43,13 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: 65002
           script: |
-            cd domains/votre-domaine.com/public_html
+            cd domains/tournoi-de-oustreham.skopee.fr/public_html
             git pull origin main
+            
+            # Utilisation du chemin complet vers composer si nécessaire
             composer install --no-dev --optimize-autoloader
+            
+            # Mise à jour de Laravel
             php artisan migrate --force
             php artisan config:cache
             php artisan route:cache
