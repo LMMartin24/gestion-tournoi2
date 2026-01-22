@@ -12,7 +12,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1. Installation de Node et compilation des assets (Vite) sur GitHub
+      # 1. Compilation des assets sur GitHub (car npm ne marche pas sur Hostinger)
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -24,7 +24,7 @@ jobs:
           npm install
           npm run build
 
-      # 2. Envoi du dossier 'build' compilé vers Hostinger via SCP
+      # 2. Envoi du dossier 'build' vers Hostinger
       - name: Upload Build Assets
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -34,9 +34,9 @@ jobs:
           port: 65002
           source: "ping-ouistreham/public/build/"
           target: "domains/tournoi-de-oustreham.skopee.fr/public_html/ping-ouistreham/public/"
-          strip_components: 2 # Enlève 'ping-ouistreham/public/' du chemin source pour ne transférer que 'build'
+          strip_components: 2
 
-      # 3. Exécution des commandes PHP sur le serveur Hostinger via SSH
+      # 3. Mise à jour du code PHP via SSH
       - name: Execute SSH Commands
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -48,13 +48,11 @@ jobs:
             cd domains/tournoi-de-oustreham.skopee.fr/public_html
             git pull origin main
             
-            # Entrer dans le dossier de l'application pour les commandes Laravel
+            # Entrée dans le dossier Laravel
             cd ping-ouistreham
             
-            # Installation des dépendances PHP
+            # Installation PHP et mise à jour Laravel
             composer install --no-dev --optimize-autoloader
-            
-            # Mise à jour de la base de données et vidage des caches
             php artisan migrate --force
             php artisan config:cache
             php artisan route:cache
