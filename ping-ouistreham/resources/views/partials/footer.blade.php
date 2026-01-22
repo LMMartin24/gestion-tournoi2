@@ -24,8 +24,18 @@
                 </ul>
 
             </div>
-            <div>
-                <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d5205.044745146377!2d-0.2784401178360115!3d49.28544697808639!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x480a61524f0441bb%3A0x29471bd1df227a03!2sP%C3%B4le%20Raquettes!5e0!3m2!1sfr!2sfr!4v1768944632852!5m2!1sfr!2sfr" width="400" height="300" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                <div class="w-full">
+                <div class="relative w-full aspect-video md:aspect-square lg:aspect-video rounded-2xl overflow-hidden border border-white/5 shadow-2xl">
+                    <iframe 
+                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2602.4045431666683!2d-0.2642546!3d49.27453!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x480a610091873139%3A0xc6c4217158788647!2sP%C3%B4le%20Raquettes%20Ouistreham!5e0!3m2!1sfr!2sfr!4v1715000000000" 
+                        class="absolute inset-0 w-full h-full grayscale opacity-80 hover:grayscale-0 hover:opacity-100 transition-all duration-500"
+                        style="border:0;" 
+                        allowfullscreen="" 
+                        loading="lazy" 
+                        referrerpolicy="no-referrer-when-downgrade">
+                    </iframe>
+                </div>
+            </div>
             </div>
         </div>
         

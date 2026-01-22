@@ -12,19 +12,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1. Compilation des assets sur GitHub (car npm ne marche pas sur Hostinger)
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Install NPM dependencies & Build
+      - name: Install NPM & Build
         run: |
           cd ping-ouistreham
           npm install
           npm run build
 
-      # 2. Envoi du dossier 'build' vers Hostinger
       - name: Upload Build Assets
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -32,11 +30,11 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           port: 65002
+          # On envoie le dossier build local vers le dossier public du serveur
           source: "ping-ouistreham/public/build/"
-          target: "domains/tournoi-de-oustreham.skopee.fr/public_html/ping-ouistreham/public/"
+          target: "domains/tournoi-de-ouistreham.skopee.fr/public_html/ping-ouistreham/public/"
           strip_components: 2
 
-      # 3. Mise à jour du code PHP via SSH
       - name: Execute SSH Commands
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -45,14 +43,21 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: 65002
           script: |
-            cd domains/tournoi-de-oustreham.skopee.fr/public_html
+            # 1. Aller à la racine du domaine (avec le 'i')
+            cd domains/tournoi-de-ouistreham.skopee.fr/public_html
+            
+            # 2. Nettoyer les fichiers locaux pour éviter les conflits Git
+            git reset --hard HEAD
             git pull origin main
             
-            # Entrée dans le dossier Laravel
+            # 3. Entrer dans le dossier de l'application
             cd ping-ouistreham
-            
-            # Installation PHP et mise à jour Laravel
+
+            # 4. Installation des dépendances PHP
             composer install --no-dev --optimize-autoloader
+
+            # 5. Mise à jour de la base de données et vidage des caches
+            # Le flag --force est nécessaire en production
             php artisan migrate --force
             php artisan config:cache
             php artisan route:cache
