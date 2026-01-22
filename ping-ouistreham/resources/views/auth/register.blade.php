@@ -30,7 +30,7 @@
                             <option value="coach">{{ __('Entraîneur (Groupé)') }}</option>
                         </select>
                     </div>
-                    <div>
+                    <div id="license_container">
                         <x-input-label for="license_number" :value="__('Numéro de licence')" class="text-white mb-2 uppercase text-xs tracking-widest" />
                         <x-text-input id="license_number" class="block w-full bg-black/50 border-white/10 text-white rounded-xl py-3" type="text" name="license_number" :value="old('license_number')" required placeholder="Ex: 1412345" />
                     </div>
@@ -50,21 +50,25 @@
                         <x-input-label for="club" :value="__('Club')" class="text-white mb-2 uppercase text-xs tracking-widest" />
                         <x-text-input id="club" class="block w-full bg-black/50 border-white/10 text-white rounded-xl py-3" type="text" name="club" :value="old('club')" required placeholder="Nom de votre club" />
                     </div>
-                    <div>
+                    <div id="points_container">
                         <x-input-label for="points" :value="__('Points mensuels')" class="text-white mb-2 uppercase text-xs tracking-widest" />
                         <x-text-input id="points" class="block w-full bg-black/50 border-white/10 text-indigo-400 font-bold rounded-xl py-3 text-lg" type="number" name="points" :value="old('points', 500)" required />
                         <p class="text-[9px] text-gray-500 mt-1 uppercase tracking-tighter">Points officiels au 1er du mois</p>
                     </div>
                 </div>
 
-                {{-- On concatène le nom pour Laravel Breeze --}}
+                {{-- Champ caché pour le nom complet requis par Breeze --}}
                 <input type="hidden" name="name" id="name" value="">
 
                 {{-- Contact et Sécurité --}}
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-white/5 pt-6">
-                    <div class="md:col-span-2">
+                    <div class="md:col-span-1">
                         <x-input-label for="email" :value="__('Email')" class="text-white mb-2 uppercase text-xs tracking-widest" />
                         <x-text-input id="email" class="block w-full bg-black/50 border-white/10 text-white rounded-xl py-3" type="email" name="email" :value="old('email')" required />
+                    </div>
+                    <div class="md:col-span-1">
+                        <x-input-label for="phone" :value="__('Téléphone')" class="text-white mb-2 uppercase text-xs tracking-widest" />
+                        <x-text-input id="phone" class="block w-full bg-black/50 border-white/10 text-white rounded-xl py-3" type="text" name="phone" :value="old('phone')" required placeholder="06..." />
                     </div>
                     <div>
                         <x-input-label for="password" :value="__('Mot de passe')" class="text-white mb-2 uppercase text-xs tracking-widest" />
@@ -91,12 +95,32 @@
 </div>
 
 <script>
-    // Petit script pour remplir le champ "name" caché avant l'envoi
     const firstName = document.getElementById('first_name');
     const lastName = document.getElementById('last_name');
     const hiddenName = document.getElementById('name');
+    const roleSelect = document.getElementById('role');
+    const licenseCont = document.getElementById('license_container');
+    const pointsCont = document.getElementById('points_container');
+    const licenseInput = document.getElementById('license_number');
+    const pointsInput = document.getElementById('points');
     const form = document.querySelector('form');
 
+    // Gestion de l'affichage selon le rôle
+    roleSelect.addEventListener('change', function() {
+        if (this.value === 'coach') {
+            licenseCont.style.opacity = '0.3';
+            pointsCont.style.opacity = '0.3';
+            licenseInput.required = false;
+            pointsInput.required = false;
+        } else {
+            licenseCont.style.opacity = '1';
+            pointsCont.style.opacity = '1';
+            licenseInput.required = true;
+            pointsInput.required = true;
+        }
+    });
+
+    // Concaténation pour le contrôleur
     form.addEventListener('submit', function() {
         hiddenName.value = firstName.value + ' ' + lastName.value;
     });

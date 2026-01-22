@@ -65,6 +65,7 @@ class RegisteredUserController extends Controller
             'password' => Hash::make($request->password),
             'points' => $request->points ?? 0,
             'club' => $request->club,
+            'phone' => $request->phone,
             // On peut ajouter ici une valeur par défaut si besoin
             'is_admin' => false, 
         ]);

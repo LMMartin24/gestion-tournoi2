@@ -29,6 +29,7 @@ class User extends Authenticatable
         'club',           // Ajouté
         'role',           // Ajouté
         'coach_id',       // Ajouté
+        'phone'
     ];
 
     /**
