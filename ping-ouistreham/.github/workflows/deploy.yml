@@ -22,4 +22,8 @@ jobs:
           script: |
             cd domains/votre-domaine.com/public_html
             git pull origin main
-            # Ajoutez ici des commandes si besoin (ex: npm install ou composer install)
+            composer install --no-dev --optimize-autoloader
+            php artisan migrate --force
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
