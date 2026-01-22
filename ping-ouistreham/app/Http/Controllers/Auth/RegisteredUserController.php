@@ -15,7 +15,7 @@ use Illuminate\View\View;
 class RegisteredUserController extends Controller
 {
     /**
-     * Display the registration view.
+     * Affiche la vue d'inscription.
      */
     public function create(): View
     {
@@ -23,28 +23,38 @@ class RegisteredUserController extends Controller
     }
 
     /**
-     * Handle an incoming registration request.
-     *
-     * @throws \Illuminate\Validation\ValidationException
+     * Gère la requête d'inscription entrante.
      */
     public function store(Request $request): RedirectResponse
     {
+        // 1. Validation stricte des données saisies manuellement
         $request->validate([
             'role' => ['required', 'string', 'in:player,coach'],
-            // La licence est requise uniquement si le rôle est 'player'
+            
+            // La licence est unique en base pour éviter les doubles inscriptions
             'license_number' => $request->role === 'player' 
-                ? ['required', 'string', 'unique:'.User::class] 
-                : ['nullable', 'string'],
+                ? ['required', 'string', 'max:20', 'unique:'.User::class] 
+                : ['nullable', 'string', 'max:20'],
+                
             'first_name' => ['required', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
+            
+            // 'name' est envoyé via le petit script JS (concaténation prénom + nom)
             'name' => ['required', 'string', 'max:255'],
+            
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'phone' => ['required', 'string', 'max:20'],
-            'points' => ['required', 'integer'],
-            'club' => ['nullable', 'string', 'max:255'],
+            
+            // On s'assure que le club est renseigné pour le suivi des tableaux
+            'club' => ['required', 'string', 'max:255'],
+            
+            // Validation des points (minimum 500 pour le ping)
+            'points' => $request->role === 'player'
+                ? ['required', 'integer', 'min:500', 'max:4000']
+                : ['nullable', 'integer'],
         ]);
 
+        // 2. Création de l'utilisateur avec les données du formulaire
         $user = User::create([
             'role' => $request->role,
             'license_number' => $request->license_number,
@@ -53,15 +63,18 @@ class RegisteredUserController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'phone' => $request->phone,
-            'points' => $request->points,
-            'club' => $request->club ?? 'Indépendant',
+            'points' => $request->points ?? 0,
+            'club' => $request->club,
+            // On peut ajouter ici une valeur par défaut si besoin
+            'is_admin' => false, 
         ]);
 
+        // 3. Déclenchement de l'événement de registration et connexion
         event(new Registered($user));
 
         Auth::login($user);
 
+        // 4. Redirection vers le tableau de bord
         return redirect(route('dashboard', absolute: false));
     }
 }
