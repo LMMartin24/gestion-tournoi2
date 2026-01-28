@@ -13,33 +13,44 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
-            $table->string('name'); // Nom d'affichage ou Prénom + Nom
+            
+            // --- CHAMPS DE BASE LARAVEL ---
+            // 'name' peut servir de pseudo ou être rempli par 'Prénom Nom' via le code
+            $table->string('name'); 
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
 
-            // --- CHAMPS AJOUTÉS POUR LE PROJET ---
+            // --- CHAMPS IDENTITÉ (Format SPID/FFTT) ---
+            $table->string('first_name')->nullable();
+            $table->string('last_name')->nullable();
             
-            // On autorise nullable car l'admin n'a pas forcément de licence
+            // Licence unique (nullable pour les admins/coachs non joueurs)
             $table->string('license_number')->unique()->nullable(); 
             $table->string('phone')->nullable();
             
-            // Points récupérés via l'API FFTT
+            // --- DONNÉES SPORTIVES ---
             $table->integer('points')->default(500);
-            
-            // Club actuel du joueur
             $table->string('club')->nullable();
 
-            // Rôles : 'player' (classique), 'coach' (entraîneur), 'admin' (le club)
-            $table->enum('role', ['player', 'coach', 'admin'])->default('player');
+            // --- SYSTÈME DE RÔLES & VALIDATION ---
+            /**
+             * player      : Joueur standard
+             * coach       : Entraîneur (gestion de groupe)
+             * admin       : Organisateur de club (crée des tournois)
+             * super_admin : Toi (gestionnaire de la plateforme nationale)
+             */
+            $table->enum('role', ['player', 'coach', 'admin', 'super_admin'])->default('player');
 
-            // -------------------------------------
+            // Sécurité SaaS : Un compte 'admin' doit être validé par toi 
+            // pour pouvoir publier des tournois officiels sur la plateforme
+            $table->boolean('is_verified_organizer')->default(false);
 
             $table->rememberToken();
             $table->timestamps();
         });
 
-        // Le reste (password_reset_tokens et sessions) ne change pas
+        // Tables techniques (Breeze/Jetstream standard)
         Schema::create('password_reset_tokens', function (Blueprint $table) {
             $table->string('email')->primary();
             $table->string('token');
@@ -54,8 +65,6 @@ return new class extends Migration
             $table->longText('payload');
             $table->integer('last_activity')->index();
         });
-
-        
     }
 
     /**

@@ -13,14 +13,21 @@ return new class extends Migration
     {
         Schema::create('sub_tables', function (Blueprint $table) {
             $table->id();
-            // Utilise foreignId qui gère automatiquement le type BigInt Unsigned
+            
+            // Relation avec le bloc horaire (SuperTable)
             $table->foreignId('super_table_id')
-                ->constrained('super_tables') // Précise le nom de la table si besoin
+                ->constrained('super_tables')
                 ->onDelete('cascade');
             
-            $table->string('label');
-            $table->decimal('entry_fee', 8, 2);
-            $table->integer('points_max');
+            // Infos du tableau
+            $table->string('label');             // ex: "Tableau H"
+            $table->decimal('entry_fee', 8, 2);  // ex: 8.50
+            
+            // Restrictions de niveau (FFTT)
+            // On garde points_min pour pouvoir faire des tableaux "1300 à 1599"
+            $table->integer('points_min')->default(500); 
+            $table->integer('points_max');               // ex: 1299
+            
             $table->timestamps();
         });
     }
