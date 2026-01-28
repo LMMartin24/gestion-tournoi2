@@ -12,87 +12,63 @@ use App\Http\Controllers\Admin\TableGeneratorController;
 
 /*
 |--------------------------------------------------------------------------
-| Public Routes
+| Public & API Test Routes
 |--------------------------------------------------------------------------
 */
 Route::get('/', function () {
     return view('welcome');
 });
 
-// Test API FFTT
 Route::get('/verify-license/{license}', [FfttController::class, 'verify']);
 
 /*
 |--------------------------------------------------------------------------
-| Authenticated Routes (Common & Profile)
+| Authenticated Routes
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth', 'verified'])->group(function () {
     
-    // REDIRECTION INTELLIGENTE : 
-    // Cette route décide d'envoyer vers le dashboard joueur ou coach
+    // Redirection automatique selon le rôle
     Route::get('/dashboard', [DashboardController::class, 'redirectBasedOnRole'])->name('dashboard');
 
-    // Gestion du profil
+    // --- PROFIL ---
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-});
 
-/*
-|--------------------------------------------------------------------------
-| Player Routes (Dashboard classique)
-|--------------------------------------------------------------------------
-*/
-Route::middleware(['auth'])->group(function () {
-    // La vue du dashboard joueur (utilisée par redirectBasedOnRole)
+    // --- JOUEUR ---
     Route::get('/player/dashboard', [DashboardController::class, 'index'])->name('player.dashboard');
-    
-    // Actions d'inscription joueur seul
     Route::post('/register/{subTable}', [DashboardController::class, 'register'])->name('player.register');
     Route::delete('/unregister/{subTable}', [DashboardController::class, 'unregister'])->name('player.unregister');
-});
 
-/*
-|--------------------------------------------------------------------------
-| Coach Routes (Espace Entraîneur)
-|--------------------------------------------------------------------------
-*/
-Route::middleware(['auth'])->group(function () {
-    // Page principale du coach
-    Route::get('/coach/dashboard', [CoachController::class, 'index'])->name('coach.dashboard');
-    
-    // Gestion des élèves
-    Route::post('/coach/add-student', [CoachController::class, 'addStudent'])->name('coach.add_student');
-    
-    // Inscriptions groupées par le coach
-    Route::post('/coach/register-player', [CoachController::class, 'registerPlayer'])->name('coach.register_player');
-    
-    // NOUVELLE ROUTE : Désinscription par le coach (avec popup de confirmation)
-    Route::post('/coach/unregister-player', [CoachController::class, 'unregisterPlayer'])->name('coach.unregister_player');
-});
+    // --- COACH (Accès restreint au rôle coach ou admin) ---
+    Route::middleware(['can:access-coach'])->group(function () {
+        Route::get('/coach/dashboard', [CoachController::class, 'index'])->name('coach.dashboard');
+        Route::post('/coach/add-student', [CoachController::class, 'addStudent'])->name('coach.add_student');
+        Route::post('/coach/register-player', [CoachController::class, 'registerPlayer'])->name('coach.register_player');
+        Route::post('/coach/unregister-player', [CoachController::class, 'unregisterPlayer'])->name('coach.unregister_player');
+    });
 
-/*
-|--------------------------------------------------------------------------
-| Admin Routes (Protected by 'admin' middleware)
-|--------------------------------------------------------------------------
-*/
-Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
-    
-    // Gestion des tournois
-    Route::resource('tournaments', TournamentController::class);
-    
-    // Gestion des Super Tableaux (Blocs / Créneaux)
-    Route::get('tournaments/{tournament}/super-tables', [SuperTablesController::class, 'create'])->name('super_tables.create');
-    Route::post('tournaments/{tournament}/super-tables', [SuperTablesController::class, 'store'])->name('super_tables.store');
-    Route::delete('super-tables/{superTable}', [SuperTablesController::class, 'destroy'])->name('super_tables.destroy');
+    // --- ADMIN / ORGANISATEUR ---
+    // Note : Le middleware 'admin' doit vérifier que user->role est 'admin' ou 'super_admin'
+    Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function () {
+        
+        Route::resource('tournaments', TournamentController::class);
+        
+        // Super Tables (Blocs)
+        Route::get('tournaments/{tournament}/super-tables', [SuperTablesController::class, 'create'])->name('super_tables.create');
+        Route::post('tournaments/{tournament}/super-tables', [SuperTablesController::class, 'store'])->name('super_tables.store');
+        Route::delete('super-tables/{superTable}', [SuperTablesController::class, 'destroy'])->name('super_tables.destroy');
 
-    // Gestion des Sub Tables (Séries)
-    Route::get('super-tables/{superTable}/sub-tables/create', [SubTableController::class, 'create'])->name('sub_tables.create');
-    Route::post('super-tables/{superTable}/sub-tables', [SubTableController::class, 'store'])->name('sub_tables.store');
-    Route::delete('sub-tables/{subTable}', [SubTableController::class, 'destroy'])->name('sub_tables.destroy'); 
-    Route::get('tournaments/{tournament}/generate', [TableGeneratorController::class, 'index'])->name('tables.index');
-    Route::post('super-tables/{superTable}/generate', [TableGeneratorController::class, 'generate'])->name('tables.generate');
+        // Sub Tables (Séries)
+        Route::get('super-tables/{superTable}/sub-tables/create', [SubTableController::class, 'create'])->name('sub_tables.create');
+        Route::post('super-tables/{superTable}/sub-tables', [SubTableController::class, 'store'])->name('sub_tables.store');
+        Route::delete('sub-tables/{subTable}', [SubTableController::class, 'destroy'])->name('sub_tables.destroy'); 
+
+        // Exports Juge-Arbitre
+        Route::get('tournaments/{tournament}/tables', [TableGeneratorController::class, 'index'])->name('tables.index');
+        Route::post('super-tables/{superTable}/generate', [TableGeneratorController::class, 'generate'])->name('tables.generate');
+    });
 });
 
 require __DIR__.'/auth.php';

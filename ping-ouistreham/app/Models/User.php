@@ -2,92 +2,97 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
         'name',
         'email',
         'password',
-        'license_number', // Ajouté
-        'phone',          // Ajouté
-        'points',         // Ajouté
-        'club',           // Ajouté
-        'role',           // Ajouté
-        'coach_id',       // Ajouté
-        'phone'
+        'license_number',
+        'phone',
+        'points',
+        'club',
+        'role',
+        'coach_id',
+        'is_verified_organizer' // Important pour ton flux de validation
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_verified_organizer' => 'boolean',
         ];
     }
+
+    // --- RELATIONS JOUEUR ---
+
     /**
- * Les tableaux (séries) auxquels le joueur est inscrit.
- */
-    public function subTables()
+     * Les inscriptions réelles du joueur (avec scores, stats, etc.)
+     */
+    public function registrations(): HasMany
     {
-        return $this->belongsToMany(SubTable::class)
-                    ->withTimestamps(); // <--- AJOUTE CECI
+        // On lie via l'utilisateur qui possède la licence
+        // Dans ton cas, on peut lier par ID ou par license_number
+        return $this->hasMany(Registration::class, 'user_id'); 
     }
 
-    public function users(): BelongsToMany
-        {
-            return $this->belongsToMany(User::class, 'sub_table_user')
-                        ->withTimestamps();
-        }
+    // --- RELATIONS COACH ---
 
-        /**
-         * Relation vers le bloc horaire parent (SuperTable).
-         */
-    public function superTable(): BelongsTo
-    {
-        return $this->belongsTo(SuperTable::class);
-    }
-
-    // App\Models\User.php
-
-    // Les joueurs dont cet utilisateur est responsable
-    public function students()
+    /**
+     * Les joueurs rattachés à ce coach
+     */
+    public function students(): HasMany
     {
         return $this->hasMany(User::class, 'coach_id');
     }
 
-    // L'entraîneur de cet utilisateur
-    public function coach()
+    /**
+     * L'entraîneur du joueur
+     */
+    public function coach(): BelongsTo
     {
         return $this->belongsTo(User::class, 'coach_id');
+    }
+
+    // --- RELATIONS ORGANISATEUR (ADMIN CLUB) ---
+
+    /**
+     * Les tournois créés par cet utilisateur
+     */
+    public function managedTournaments(): HasMany
+    {
+        return $this->hasMany(Tournament::class, 'user_id');
+    }
+
+    // --- HELPERS DE RÔLES (Pratique pour les Controllers & Blade) ---
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->role === 'super_admin';
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    public function isCoach(): bool
+    {
+        return $this->role === 'coach';
     }
 }

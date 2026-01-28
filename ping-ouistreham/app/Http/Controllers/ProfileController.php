@@ -12,7 +12,7 @@ use Illuminate\View\View;
 class ProfileController extends Controller
 {
     /**
-     * Display the user's profile form.
+     * Affiche le formulaire d'édition.
      */
     public function edit(Request $request): View
     {
@@ -22,23 +22,27 @@ class ProfileController extends Controller
     }
 
     /**
-     * Update the user's profile information.
+     * Met à jour les informations, y compris les données FFTT.
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        // On récupère l'instance de l'utilisateur
+        $user = $request->user();
+        
+        // On remplit avec les données validées (voir l'étape suivante pour la Request)
+        $user->fill($request->validated());
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
         }
 
-        $request->user()->save();
+        $user->save();
 
         return Redirect::route('profile.edit')->with('status', 'profile-updated');
     }
 
     /**
-     * Delete the user's account.
+     * Supprime le compte (avec suppression en cascade des inscriptions via la BD).
      */
     public function destroy(Request $request): RedirectResponse
     {

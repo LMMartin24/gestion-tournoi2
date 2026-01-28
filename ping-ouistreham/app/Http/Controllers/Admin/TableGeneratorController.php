@@ -5,14 +5,19 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\SuperTable;
 use App\Models\Tournament;
+use Illuminate\Http\Request;
 
 class TableGeneratorController extends Controller
 {
     public function index(Tournament $tournament)
     {
-        // On récupère les créneaux avec leurs séries et les joueurs inscrits
+        // On vérifie que l'admin est le proprio
+        if (auth()->id() !== $tournament->user_id && !auth()->user()->isSuperAdmin()) {
+            abort(403);
+        }
+
         $superTables = SuperTable::where('tournament_id', $tournament->id)
-            ->with(['subTables.users'])
+            ->with(['subTables.registrations']) // On charge les inscriptions, pas juste les users
             ->get();
 
         return view('admin.tables.index', compact('tournament', 'superTables'));
@@ -21,11 +26,13 @@ class TableGeneratorController extends Controller
     public function generate(SuperTable $superTable)
     {
         $tournament = $superTable->tournament;
-        $fileName = 'Tableau_' . str_replace(' ', '_', $superTable->label) . '.csv';
+        
+        // Utilise 'name' car 'label' n'existe pas dans ta migration SuperTable
+        $fileName = 'Export_' . Str::slug($superTable->name) . '.csv';
 
-        // Chargement des données avec les joueurs triés par points
-        $superTable->load(['subTables.users' => function($query) {
-            $query->orderBy('points', 'desc');
+        // On charge les inscriptions confirmées, triées par points (snapshot)
+        $superTable->load(['subTables.registrations' => function($query) {
+            $query->where('status', 'confirmed')->orderBy('player_points', 'desc');
         }]);
 
         $headers = [
@@ -38,34 +45,30 @@ class TableGeneratorController extends Controller
 
         $callback = function() use ($superTable, $tournament) {
             $file = fopen('php://output', 'w');
-            
-            // Ajout du BOM pour qu'Excel reconnaisse l'UTF-8 (gère les accents)
-            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF)); // BOM UTF-8
 
-            // Ligne 1 : Titre du tournoi
-            fputcsv($file, ['TOURNOI', $tournament->name]);
-            // Ligne 2 : Nom du Super Tableau (Créneau)
-            fputcsv($file, ['CRÉNEAU', $superTable->label, 'Horaire', $superTable->start_time]);
-            fputcsv($file, []); // Ligne vide de séparation
+            fputcsv($file, ['TOURNOI', $tournament->name, 'DATE', $tournament->date]);
+            fputcsv($file, ['CRÉNEAU', $superTable->name, 'HORAIRE', $superTable->start_time]);
+            fputcsv($file, []); 
 
-            // Parcours des sous-tableaux (Séries)
             foreach ($superTable->subTables as $subTable) {
-                // Entête de la série
-                fputcsv($file, ['SÉRIE', $subTable->label, 'Max pts', $subTable->points_max]);
-                // Entête des colonnes
-                fputcsv($file, ['Nom du Joueur', 'Points', 'N° Licence', 'Email']);
+                fputcsv($file, ['SÉRIE', $subTable->label, 'LIMITE', $subTable->points_max . ' pts']);
+                
+                // Entête adaptée au logiciel de Juge-Arbitrage (SPID / Girpe)
+                fputcsv($file, ['Place', 'Nom', 'Prénom', 'Points', 'Licence', 'Statut']);
 
-                foreach ($subTable->users as $player) {
+                foreach ($subTable->registrations as $index => $reg) {
                     fputcsv($file, [
-                        $player->name,
-                        $player->points,
-                        $player->license_number,
-                        $player->email,
-                        $player->pivot->created_at->format('d/m/Y H:i')
+                        $index + 1,
+                        $reg->player_lastname,
+                        $reg->player_firstname,
+                        $reg->player_points,
+                        $reg->player_license,
+                        $reg->priority == 'backup' ? 'Remplaçant' : 'Titulaire'
                     ]);
                 }
                 
-                fputcsv($file, []); // Ligne vide entre chaque série
+                fputcsv($file, []); 
             }
 
             fclose($file);

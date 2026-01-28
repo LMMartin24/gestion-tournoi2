@@ -13,14 +13,15 @@ class AdminMiddleware
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
+
+
     public function handle(Request $request, Closure $next)
     {
-        // On vérifie si l'utilisateur est connecté ET si son rôle est 'admin'
-        if (auth()->check() && auth()->user()->role === 'admin') {
+        // On autorise l'admin de club ET le super_admin de la plateforme
+        if (auth()->check() && (auth()->user()->role === 'admin' || auth()->user()->role === 'super_admin')) {
             return $next($request);
         }
 
-        // Sinon, on redirige vers le dashboard avec un message d'erreur
         return redirect('/dashboard')->with('error', 'Accès refusé. Réservé aux administrateurs.');
     }
 }

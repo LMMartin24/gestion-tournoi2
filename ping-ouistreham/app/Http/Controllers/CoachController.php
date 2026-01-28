@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\SubTable;
+use App\Models\Registration;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 
@@ -12,38 +13,19 @@ class CoachController extends Controller
 {
     public function index()
     {
-        if (auth()->user()->role !== 'coach') {
+        // Utilisation du helper de rôle qu'on a créé dans le Model User
+        if (!auth()->user()->isCoach()) {
             return redirect()->route('dashboard')->with('error', "Accès réservé aux entraîneurs.");
         }
-        $coach = Auth::user();
-        $myPlayers = User::where('coach_id', $coach->id)->get();
-        // On charge les relations pour calculer le remplissage global du créneau
-        $availableSubTables = SubTable::with(['superTable.subTables.users', 'users'])->get(); 
+
+        $myPlayers = User::where('coach_id', auth()->id())->get();
+        
+        // On récupère uniquement les tournois acceptés et publiés
+        $availableSubTables = SubTable::whereHas('superTable.tournament', function($q) {
+            $q->where('status', 'accepted')->where('is_published', true);
+        })->with(['superTable.tournament', 'registrations'])->get(); 
 
         return view('coach.dashboard', compact('myPlayers', 'availableSubTables'));
-    }
-
-    public function addStudent(Request $request)
-    {
-        $request->validate([
-            'license_number' => 'required|string|unique:users,license_number',
-            'email'          => 'required|email|unique:users,email',
-            'password'       => 'required|string|min:8',
-            'name'           => 'required|string|max:255',
-        ]);
-
-        $coach = auth()->user();
-
-        $student = User::create([
-            'name'           => $request->name,
-            'license_number' => $request->license_number,
-            'email'          => $request->email,
-            'password'       => Hash::make($request->password),
-            'coach_id'       => $coach->id,
-            'points'         => 500,
-        ]);
-
-        return back()->with('success', "Le compte de {$student->name} a été créé.");
     }
 
     public function registerPlayer(Request $request)
@@ -53,52 +35,62 @@ class CoachController extends Controller
             'sub_table_id' => 'required|exists:sub_tables,id',
         ]);
 
-        $subTable = SubTable::with(['superTable.subTables.users'])->findOrFail($request->sub_table_id);
-        $player = User::with('subTables')->findOrFail($request->player_id);
+        $subTable = SubTable::with('superTable')->findOrFail($request->sub_table_id);
+        $player = User::findOrFail($request->player_id);
         $coach = auth()->user();
 
         // 1. Sécurité : Propriété de l'élève
         if ($player->coach_id !== $coach->id && $player->id !== $coach->id) {
-            return back()->with('error', "Vous n'avez pas l'autorisation d'inscrire ce joueur.");
+            return back()->with('error', "Vous n'avez pas l'autorisation pour ce joueur.");
         }
 
-        // --- NOUVELLE SÉCURITÉ : LIMITE DE 2 TABLEAUX ---
-        if ($player->subTables->count() >= 2) {
-            return back()->with('error', "{$player->name} a déjà atteint la limite maximale de 2 tableaux.");
-        }
-        // ------------------------------------------------
+        // 2. Vérification des conflits (Un seul tableau par bloc horaire)
+        $hasConflict = Registration::where('user_id', $player->id)
+            ->whereHas('subTable', function($q) use ($subTable) {
+                $q->where('super_table_id', $subTable->super_table_id);
+            })->exists();
 
-        // 2. Vérification des points
-        if ($player->points > $subTable->points_max) {
-            return back()->with('error', "{$player->name} a trop de points pour ce tableau.");
-        }
-
-        // 3. Vérification du SuperTableau (Capacité globale)
-        $superTable = $subTable->superTable;
-        $totalInscribedInSlot = $superTable->subTables->sum(fn($sub) => $sub->users->count());
-
-        if ($totalInscribedInSlot >= $superTable->max_players) {
-            return back()->with('error', "Le créneau horaire est complet.");
+        if ($hasConflict) {
+            return back()->with('error', "{$player->name} est déjà inscrit sur ce créneau horaire.");
         }
 
-        // 4. Inscription
-        $player->subTables()->syncWithoutDetaching([$subTable->id]);
+        // 3. Limite de niveau (Points)
+        if ($player->points > $subTable->points_max || $player->points < $subTable->points_min) {
+            return back()->with('error', "Le classement de {$player->name} ne correspond pas à ce tableau.");
+        }
 
-        return back()->with('success', "{$player->name} est inscrit au {$subTable->label}.");
+        // 4. Gestion de la capacité et Liste d'attente
+        $status = $subTable->superTable->isFull() ? 'waiting_list' : 'confirmed';
+
+        // 5. Création de l'inscription (Le modèle Registration gère le snapshot automatiquement)
+        Registration::create([
+            'user_id' => $player->id,
+            'sub_table_id' => $subTable->id,
+            'created_by' => $coach->id,
+            'status' => $status,
+            'player_license' => $player->license_number,
+            'player_firstname' => $player->first_name, // Assure-toi que ces champs existent
+            'player_lastname' => $player->last_name,
+            'player_points' => $player->points,
+        ]);
+
+        $msg = ($status === 'confirmed') ? "Inscription confirmée." : "Placé en liste d'attente.";
+        return back()->with('success', "{$player->name} : $msg");
     }
 
     public function unregisterPlayer(Request $request)
     {
-        $request->validate([
-            'player_id' => 'required|exists:users,id',
-            'sub_table_id' => 'required|exists:sub_tables,id',
-        ]);
+        $registration = Registration::where('user_id', $request->player_id)
+            ->where('sub_table_id', $request->sub_table_id)
+            ->firstOrFail();
+            
+        // Seul le créateur (coach) ou le super_admin peut désinscrire
+        if ($registration->created_by !== auth()->id() && !auth()->user()->isSuperAdmin()) {
+            abort(403);
+        }
 
-        $player = User::findOrFail($request->player_id);
-        
-        // On détache le joueur du tableau spécifique
-        $player->subTables()->detach($request->sub_table_id);
+        $registration->delete();
 
-        return back()->with('success', "{$player->name} a été désinscrit avec succès.");
+        return back()->with('success', "Désinscription effectuée.");
     }
 }
