@@ -69,6 +69,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('tournaments/{tournament}/tables', [TableGeneratorController::class, 'index'])->name('tables.index');
         Route::post('super-tables/{superTable}/generate', [TableGeneratorController::class, 'generate'])->name('tables.generate');
         Route::get('/subtables/{subTable}/export-girpe', [SubTableController::class, 'exportGirpe'])->name('export.girpe');
+
+        Route::get('/sub-tables/{subTable}/participants', [TournamentController::class, 'viewSubTableParticipants'])
+            ->name('sub-tables.participants');
+        Route::delete('/registrations/{registration}/cancel', [TournamentController::class, 'cancelRegistration'])
+            ->name('registrations.cancel');
     });
 });
 

@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use App\Models\SubTable;
+use App\Models\Registration; 
 
 class TournamentController extends Controller
 {
@@ -160,5 +162,32 @@ class TournamentController extends Controller
         ])->header('Content-Type', 'application/vnd.ms-excel')
         ->header('Content-Disposition', "attachment; filename=$fileName");
     }
+    public function viewRegistrations(Tournament $tournament)
+    {
+        // On récupère les SuperTables avec leurs Sous-Tableaux et les Inscriptions
+        $tournament->load(['superTables.subTables.registrations.user']);
+
+        return view('admin.tournaments.registrations', compact('tournament'));
+    }
+
+    public function cancelRegistration(Registration $registration)
+    {
+        // On garde l'ID pour un éventuel message ou log avant suppression
+        $playerName = $registration->player_firstname . ' ' . $registration->player_lastname;
+        
+        $registration->delete();
+
+        return back()->with('success', "Le joueur $playerName a été désinscrit.");
+    }
+
+        public function viewSubTableParticipants(SubTable $subTable)
+    {
+        // On charge les inscriptions avec l'utilisateur relié (pour mail/tel)
+        $subTable->load(['registrations.user', 'superTable.tournament']);
+
+        return view('admin.sub_tables.participants', compact('subTable'));
+    }
+
+    
     
 }
