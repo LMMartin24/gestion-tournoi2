@@ -136,11 +136,29 @@ class TournamentController extends Controller
         return redirect()->route('admin.tournaments.index')
             ->with('success', 'Le tournoi a été supprimé avec succès.');
     }
-    /**
-     * Relation vers l'utilisateur (le joueur)
-     */
-    public function user(): BelongsTo
+
+    public function exportRegistrations($id)
     {
-        return $this->belongsTo(User::class);
+        $tournament = \App\Models\Tournament::findOrFail($id);
+        
+        // Récupération de toutes les inscriptions avec les infos utilisateurs (email, tel)
+        $allRegistrations = \App\Models\Registration::whereHas('subTable.superTable', function($q) use ($id) {
+            $q->where('tournament_id', $id);
+        })->with(['subTable', 'user'])->get();
+
+        // Groupement par tableau pour les feuilles suivantes
+        $registrationsByTable = $allRegistrations->groupBy(function($reg) {
+            return $reg->subTable->label;
+        });
+
+        $fileName = 'export-tournoi-' . \Str::slug($tournament->name) . '.xls';
+
+        return response()->view('admin.exports.registrations_excel', [
+            'allRegistrations' => $allRegistrations,
+            'registrationsByTable' => $registrationsByTable,
+            'tournament' => $tournament
+        ])->header('Content-Type', 'application/vnd.ms-excel')
+        ->header('Content-Disposition', "attachment; filename=$fileName");
     }
+    
 }

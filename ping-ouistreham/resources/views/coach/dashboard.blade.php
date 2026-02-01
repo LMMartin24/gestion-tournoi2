@@ -4,6 +4,22 @@
 <div class="min-h-screen bg-black pt-32 pb-20 px-6">
     <div class="max-w-7xl mx-auto">
         
+        {{-- AFFICHAGE DES ERREURS ET SUCCÈS --}}
+        @if ($errors->any() || session('success') || session('error'))
+            <div class="mb-10 space-y-4">
+                @if(session('success'))
+                    <div class="bg-green-500/20 border border-green-500/50 text-green-500 p-4 rounded-2xl text-[10px] font-black uppercase tracking-widest">
+                        // SUCCESS: {{ session('success') }}
+                    </div>
+                @endif
+                @if(session('error') || $errors->any())
+                    <div class="bg-red-500/20 border border-red-500/50 text-red-500 p-4 rounded-2xl text-[10px] font-black uppercase tracking-widest">
+                        // ERROR: {{ session('error') ?? $errors->first() }}
+                    </div>
+                @endif
+            </div>
+        @endif
+
         <div class="mb-16 flex flex-col md:flex-row justify-between items-end gap-6">
             <div>
                 <h2 class="text-5xl font-black uppercase italic tracking-tighter text-white">
@@ -19,6 +35,7 @@
             </a>
         </div>
 
+        {{-- SECTION 1 : INSCRIRE L'ÉQUIPE AUX TABLEAUX --}}
         <div class="mb-20">
             <h3 class="text-2xl font-black uppercase italic mb-8 text-white flex items-center gap-3">
                 <span class="w-2 h-8 bg-indigo-600 rounded-full"></span>
@@ -41,18 +58,21 @@
                             </span>
                         </div>
 
+                        {{-- Liste des joueurs déjà inscrits dans ce tableau --}}
                         <div class="flex flex-wrap gap-2 mb-8 min-h-[32px]">
                             @php
                                 $teamIds = auth()->user()->students->pluck('id')->push(auth()->id());
-                                $teamInscribed = $table->users->whereIn('id', $teamIds);
+                                $teamInscribed = $table->registrations 
+                                    ? $table->registrations->whereIn('user_id', $teamIds) 
+                                    : collect();
                             @endphp
 
-                            @foreach($teamInscribed as $inscribed)
+                            @foreach($teamInscribed as $registration)
                                 <button type="button" 
-                                    onclick="confirmUnregister('{{ $inscribed->id }}', '{{ $table->id }}', '{{ $inscribed->name }}')"
+                                    onclick="confirmUnregister('{{ $registration->user_id }}', '{{ $table->id }}', '{{ $registration->player_firstname }} {{ $registration->player_lastname }}')"
                                     class="flex items-center gap-2 text-[9px] bg-white/5 text-gray-400 border border-white/5 px-3 py-1.5 rounded-xl font-black uppercase tracking-widest hover:bg-red-500/20 hover:text-red-500 hover:border-red-500/30 transition-all group/badge">
                                     <span class="w-1 h-1 bg-green-500 rounded-full group-hover/badge:bg-red-500"></span>
-                                    {{ $inscribed->name }}
+                                    {{ $registration->player_firstname }} {{ substr($registration->player_lastname, 0, 1) }}.
                                     <span class="opacity-0 group-hover/badge:opacity-100 ml-1 text-xs">×</span>
                                 </button>
                             @endforeach
@@ -61,7 +81,6 @@
                         <form action="{{ route('coach.register_player') }}" method="POST" class="mt-auto pt-6 border-t border-white/5">
                             @csrf
                             <input type="hidden" name="sub_table_id" value="{{ $table->id }}">
-                            
                             <div class="space-y-4">
                                 <select name="player_id" required class="w-full bg-black border border-white/10 rounded-2xl px-5 py-4 text-white text-[10px] font-black uppercase tracking-widest focus:border-indigo-500 outline-none transition-all">
                                     <option value="" disabled selected>Choisir un joueur...</option>
@@ -70,15 +89,14 @@
                                     @endif
                                     @foreach(auth()->user()->students as $student)
                                         @php 
-                                            $isFull = $student->subTables->count() >= 2;
+                                            $isFull = $student->registrations->where('subTable.superTable.tournament_id', $table->superTable->tournament_id)->count() >= 2;
                                             $tooManyPoints = $student->points > $table->points_max;
                                         @endphp
                                         <option value="{{ $student->id }}" {{ ($isFull || $tooManyPoints) ? 'disabled' : '' }}>
-                                            {{ $student->name }} ({{ $student->points }} pts) {{ $isFull ? '[MAX 2]' : ($tooManyPoints ? '[POINTS TROP ÉLEVÉS]' : '') }}
+                                            {{ $student->name }} ({{ $student->points }} pts) {{ $isFull ? '[MAX 2]' : ($tooManyPoints ? '[PTS TROP HAUTS]' : '') }}
                                         </option>
                                     @endforeach
                                 </select>
-
                                 <button type="submit" class="w-full bg-indigo-600 hover:bg-white hover:text-black text-white font-black uppercase text-[10px] tracking-[0.3em] py-5 rounded-2xl transition-all shadow-lg shadow-indigo-500/10">
                                     Valider l'inscription
                                 </button>
@@ -93,13 +111,52 @@
             </div>
         </div>
 
+        {{-- SECTION 2 : LISTE DES ÉLÈVES ET IDENTIFIANTS --}}
+        <div class="mb-20">
+            <h3 class="text-2xl font-black uppercase italic mb-8 text-white flex items-center gap-3">
+                <span class="w-2 h-8 bg-indigo-600 rounded-full"></span>
+                Mes Élèves & Accès
+            </h3>
+            <div class="bg-[#0f0f0f] border border-white/5 rounded-[2.5rem] overflow-hidden shadow-2xl">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-white/5 text-gray-500 text-[10px] uppercase font-black tracking-widest">
+                            <th class="px-8 py-6">Nom de l'élève</th>
+                            <th class="px-8 py-6">Identifiant Email</th>
+                            <th class="px-8 py-6">Mot de passe</th>
+                            <th class="px-8 py-6 text-right">Points</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-white/5">
+                        @forelse(auth()->user()->students as $student)
+                            <tr class="hover:bg-white/[0.02] transition-colors">
+                                <td class="px-8 py-6 text-white font-bold uppercase italic">{{ $student->name }}</td>
+                                <td class="px-8 py-6 text-indigo-400 font-mono text-xs">{{ $student->email }}</td>
+                                <td class="px-8 py-6">
+                                    <span class="bg-white/5 px-3 py-2 rounded-lg text-gray-400 font-mono text-xs">
+                                        {{ $student->password_plain ?? '********' }}
+                                    </span>
+                                </td>
+                                <td class="px-8 py-6 text-right text-white font-black tracking-tighter">{{ $student->points }} <span class="text-gray-600 text-[10px]">PTS</span></td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="4" class="px-8 py-10 text-center text-gray-600 uppercase text-xs font-bold tracking-widest italic">Aucun élève enregistré</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {{-- SECTION 3 : FORMULAIRE D'AJOUT --}}
         <div id="add-student" class="max-w-3xl mx-auto">
             <div class="bg-[#1a1a1a] border border-white/10 p-10 rounded-[3rem] shadow-3xl">
-                <div class="mb-8">
+                <div class="mb-8 text-center">
                     <h2 class="text-3xl font-black uppercase italic text-white tracking-tighter">
                         NOUVEL <span class="text-indigo-500">ÉLÈVE</span>
                     </h2>
-                    <p class="text-gray-600 text-[10px] uppercase font-bold tracking-widest mt-1 italic">// CRÉATION DE COMPTE AUTOMATIQUE</p>
+                    <p class="text-gray-600 text-[10px] uppercase font-bold tracking-widest mt-1 italic">// EMAIL ET PASSWORD GÉNÉRÉS AUTOMATIQUEMENT</p>
                 </div>
 
                 <form action="{{ route('coach.add_student') }}" method="POST" class="space-y-6">
@@ -107,24 +164,20 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label class="text-[10px] uppercase font-black text-gray-400 tracking-widest ml-1 mb-2 block">Nom complet</label>
-                            <input type="text" name="name" required placeholder="EX: JEAN DUPONT" class="w-full bg-black border border-white/10 rounded-2xl px-6 py-4 text-white text-sm focus:border-indigo-500 transition-all">
+                            <input type="text" name="name" required placeholder="EX: JEAN DUPONT" class="w-full bg-black border border-white/10 rounded-2xl px-6 py-4 text-white text-sm focus:border-indigo-500 transition-all outline-none">
                         </div>
                         <div>
                             <label class="text-[10px] uppercase font-black text-gray-400 tracking-widest ml-1 mb-2 block">N° Licence</label>
-                            <input type="text" name="license_number" required placeholder="EX: 1422334" class="w-full bg-black border border-white/10 rounded-2xl px-6 py-4 text-white text-sm focus:border-indigo-500 transition-all">
+                            <input type="text" name="license_number" required placeholder="EX: 1422334" class="w-full bg-black border border-white/10 rounded-2xl px-6 py-4 text-white text-sm focus:border-indigo-500 transition-all outline-none">
                         </div>
-                        <div>
+                        <div class="md:col-span-2">
                             <label class="text-[10px] uppercase font-black text-gray-400 tracking-widest ml-1 mb-2 block">Points FFTT</label>
-                            <input type="number" name="points" required placeholder="500" class="w-full bg-black border border-white/10 rounded-2xl px-6 py-4 text-white text-sm focus:border-indigo-500 transition-all">
-                        </div>
-                        <div>
-                            <label class="text-[10px] uppercase font-black text-gray-400 tracking-widest ml-1 mb-2 block">Email (ou celui du coach)</label>
-                            <input type="email" name="email" required value="{{ auth()->user()->email }}" class="w-full bg-black border border-white/10 rounded-2xl px-6 py-4 text-white text-sm focus:border-indigo-500 transition-all">
+                            <input type="number" name="points" required placeholder="500" class="w-full bg-black border border-white/10 rounded-2xl px-6 py-4 text-white text-sm focus:border-indigo-500 transition-all outline-none">
                         </div>
                     </div>
 
                     <button type="submit" class="w-full bg-white text-black font-black uppercase text-xs tracking-[0.3em] py-6 rounded-2xl hover:bg-indigo-600 hover:text-white transition-all duration-500 transform hover:-translate-y-1 shadow-xl">
-                        Enregistrer dans mon groupe
+                        Enregistrer et générer les accès
                     </button>
                 </form>
             </div>

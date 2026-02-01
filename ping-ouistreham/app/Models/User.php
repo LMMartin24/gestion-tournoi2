@@ -22,6 +22,7 @@ class User extends Authenticatable
         'club',
         'role',
         'coach_id',
+        'password_plain',
         'is_verified_organizer' // Important pour ton flux de validation
     ];
 
@@ -68,6 +69,7 @@ class User extends Authenticatable
     {
         return $this->belongsTo(User::class, 'coach_id');
     }
+    
 
     // --- RELATIONS ORGANISATEUR (ADMIN CLUB) ---
 

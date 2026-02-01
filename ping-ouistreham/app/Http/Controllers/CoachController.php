@@ -10,6 +10,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Support\Str;
+use App\Mail\WelcomeStudentMail;
+use Illuminate\Support\Facades\Mail;
 
 class CoachController extends Controller
 {
@@ -39,27 +42,54 @@ class CoachController extends Controller
     /**
      * Création d'un compte élève lié au coach.
      */
+
+
     public function addStudent(Request $request)
     {
+        // 1. Validation des données entrantes
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
             'license_number' => 'required|string|unique:users,license_number',
             'points' => 'required|integer|min:500',
-            'password' => 'required|min:8',
         ]);
 
-        User::create([
+        // 2. Génération de l'email : nomprenom@tennisdetabledeouistreham.com
+        // On nettoie le nom (slug) et on enlève les tirets
+        $cleanName = str_replace('-', '', Str::slug($validated['name']));
+        $generatedEmail = $cleanName . '@tennisdetabledeouistreham.com';
+
+        // Sécurité : Si l'email existe déjà (homonyme), on ajoute un chiffre
+        $finalEmail = $generatedEmail;
+        $count = 1;
+        while (User::where('email', $finalEmail)->exists()) {
+            $finalEmail = $cleanName . $count . '@tennisdetabledeouistreham.com';
+            $count++;
+        }
+
+        // 3. Génération du mot de passe aléatoire
+        $randomPassword = Str::random(10);
+
+        // 4. Création de l'utilisateur en base de données
+        $student = User::create([
             'name' => $validated['name'],
-            'email' => $validated['email'],
+            'email' => $finalEmail,
             'license_number' => $validated['license_number'],
             'points' => $validated['points'],
-            'password' => Hash::make($validated['password']),
+            'password' => Hash::make($randomPassword), // Version cryptée pour la sécurité Laravel
+            'password_plain' => $randomPassword,       // Version CLAIRE pour l'affichage coach
             'role' => 'player',
             'coach_id' => auth()->id(),
+            'club' => auth()->user()->club,            // On lui donne le même club que le coach
         ]);
 
-        return back()->with('success', "L'élève {$validated['name']} a été ajouté à votre groupe.");
+        // 5. Envoi de l'email de bienvenue (Optionnel, nécessite config .env)
+        try {
+            Mail::to($student->email)->send(new WelcomeStudentMail($student, $randomPassword));
+        } catch (\Exception $e) {
+            // On continue même si l'email ne part pas (utile en local sans config mail)
+        }
+
+        return back()->with('success', "L'élève {$student->name} a été ajouté. Email : {$student->email}");
     }
 
     /**

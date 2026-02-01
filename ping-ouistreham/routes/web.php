@@ -12,10 +12,12 @@ use App\Http\Controllers\Admin\SubTableController;
 use App\Http\Controllers\Admin\TableGeneratorController;
 use App\Http\Controllers\Api\FfttController;
 
+// --- ROUTES PUBLIQUES ---
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/tournaments/{slug}', [TournamentPublicController::class, 'show'])->name('tournaments.public.show');
 Route::get('/verify-license/{license}', [FfttController::class, 'verify']);
 
+// --- ROUTES AUTHENTIFIÉES ---
 Route::middleware(['auth', 'verified'])->group(function () {
     
     Route::get('/dashboard', [DashboardController::class, 'redirectBasedOnRole'])->name('dashboard');
@@ -43,14 +45,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // --- ESPACE ADMIN / ORGANISATEUR ---
     Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function () {
         
-        // Tournois (Gestion par Slug)
+        // Tournois (Gestion par Slug pour les ressources standard)
         Route::resource('tournaments', TournamentController::class)->scoped([
             'tournament' => 'slug',
         ]);
+
+        // Actions spécifiques aux tournois
         Route::patch('/tournaments/{tournament}/approve', [TournamentController::class, 'approve'])->name('tournaments.approve');
+        
+        // CORRECTION : Route d'export des inscriptions
+        // On utilise {id} car l'export se base souvent sur l'ID numérique pour la requête
+        Route::get('/tournaments/{id}/export', [TournamentController::class, 'exportRegistrations'])->name('tournaments.export');
 
         // Super Tables (Blocs horaires)
-        // Note: Tu n'as pas de route 'create', donc on utilise 'show' du tournoi pour afficher le formulaire
         Route::post('tournaments/{tournament}/super-tables', [SuperTablesController::class, 'store'])->name('super_tables.store');
         Route::delete('super-tables/{superTable}', [SuperTablesController::class, 'destroy'])->name('super_tables.destroy');
 
@@ -58,11 +65,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('super-tables/{superTable}/sub-tables', [SubTableController::class, 'store'])->name('sub_tables.store');
         Route::delete('sub-tables/{subTable}', [SubTableController::class, 'destroy'])->name('sub_tables.destroy'); 
 
-        // Exports & Génération
+        // Exports & Génération technique
         Route::get('tournaments/{tournament}/tables', [TableGeneratorController::class, 'index'])->name('tables.index');
         Route::post('super-tables/{superTable}/generate', [TableGeneratorController::class, 'generate'])->name('tables.generate');
         Route::get('/subtables/{subTable}/export-girpe', [SubTableController::class, 'exportGirpe'])->name('export.girpe');
-        Route::delete('/admin/tournaments/{tournament}', [TournamentController::class, 'destroy'])->name('admin.tournaments.destroy');
     });
 });
 
