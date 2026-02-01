@@ -8,23 +8,17 @@ use Illuminate\Validation\Rule;
 
 class ProfileUpdateRequest extends FormRequest
 {
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
-     */
     public function rules(): array
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'email' => [
-                'required',
-                'string',
-                'lowercase',
-                'email',
-                'max:255',
-                Rule::unique(User::class)->ignore($this->user()->id),
-            ],
+            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique(User::class)->ignore($this->user()->id)],
+            
+            // Tes ajouts pour le SaaS Ping
+            'license_number' => ['required', 'string', 'max:20'], 
+            'points' => ['required', 'integer', 'min:500', 'max:4000'],
+            'phone' => ['nullable', 'string', 'max:20'],
+            'club' => ['nullable', 'string', 'max:255'],
         ];
     }
 }

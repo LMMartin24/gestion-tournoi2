@@ -36,17 +36,18 @@ class SubTableController extends Controller
         }
 
         $validated = $request->validate([
-            'label'      => 'required|string|max:255',
+            'label'      => 'required|string|max:50', // "Série A" ou "Moins de 900"
             'entry_fee'  => 'required|numeric|min:0',
-            'points_min' => 'required|integer|min:500', // Ajouté pour les tableaux de niveau
-            'points_max' => 'required|integer|gte:points_min', // Doit être > ou = au min
+            'points_min' => 'required|integer|min:500',
+            'points_max' => 'required|integer|gte:points_min',
         ]);
 
+        // On crée la sub_table (la série) liée au bloc horaire
         $superTable->subTables()->create($validated);
 
-        // On redirige vers la gestion du tournoi (SuperTables) pour voir le résultat
-        return redirect()->route('admin.super_tables.create', $tournament->id)
-                         ->with('success', 'Série "' . $validated['label'] . '" ajoutée au bloc.');
+        // UX : On redirige vers la vue de gestion du tournoi pour voir la liste mise à jour
+        return redirect()->route('admin.tournaments.show', $tournament->slug)
+                        ->with('success', "Série {$validated['label']} ajoutée avec succès.");
     }
 
     /**

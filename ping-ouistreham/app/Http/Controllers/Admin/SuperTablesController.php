@@ -37,20 +37,25 @@ class SuperTablesController extends Controller
         }
 
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
             'start_time' => 'required',
             'max_players' => 'required|integer|min:1',
-            'date' => 'nullable|date', // Optionnel, sinon on prend celle du tournoi
+            'date' => 'nullable|date',
         ]);
 
-        // Si la date n'est pas précisée (tournoi sur 1 jour), on prend la date du tournoi
+        // On ajoute un nom par défaut si absent (ex: "Créneau de 14:00")
+        $validated['name'] = $request->input('name', 'Créneau de ' . $request->start_time);
+        
         if (empty($validated['date'])) {
             $validated['date'] = $tournament->date;
         }
 
-        $tournament->superTables()->create($validated);
-
-        return redirect()->back()->with('success', 'Bloc horaire ajouté au tournoi.');
+        try {
+            $tournament->superTables()->create($validated);
+            return redirect()->back()->with('success', 'Bloc horaire ajouté au tournoi.');
+        } catch (\Exception $e) {
+            // Si ça rate encore, ce DD te dira quelle colonne SQL pose problème
+            dd("Erreur SQL : " . $e->getMessage());
+        }
     }
 
     /**
@@ -67,4 +72,5 @@ class SuperTablesController extends Controller
 
         return redirect()->back()->with('success', 'Le créneau et ses tableaux ont été supprimés.');
     }
+
 }

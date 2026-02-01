@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Registration extends Model
 {
     protected $fillable = [
+        'user_id',
         'created_by', 
         'sub_table_id', 
         'player_license', 
@@ -18,6 +19,7 @@ class Registration extends Model
         'status', 
         'presence_confirmed'
     ];
+    
 
     /**
      * Relation vers le créateur (Le compte qui a fait l'action)
@@ -58,4 +60,13 @@ class Registration extends Model
     {
         return $query->where('status', 'waiting_list');
     }
+
+    /**
+     * Relation vers l'utilisateur (le joueur)
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+    
 }

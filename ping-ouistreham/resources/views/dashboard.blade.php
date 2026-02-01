@@ -1,108 +1,179 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="min-h-screen pt-32 pb-20 bg-black text-white">
-    <div class="max-w-7xl mx-auto px-6">
+<div class="min-h-screen bg-[#0a0a0a] text-white pt-24 pb-12">
+    <div class="max-w-7xl mx-auto px-6 lg:px-12">
         
-        <div class="mb-16">
-            <h2 class="text-2xl font-black uppercase italic tracking-tighter mb-8 flex items-center gap-3">
-                <span class="w-2 h-8 bg-green-500 rounded-full"></span>
-                Mes Tableaux <span class="text-gray-600 text-sm ml-2">({{ $mySubTables->count() }})</span>
-            </h2>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                @forelse($mySubTables as $table)
-                    <div class="bg-[#0f0f0f] border border-green-500/20 p-6 rounded-[2rem] relative overflow-hidden group">
-                        <div class="flex justify-between items-start mb-4">
-                            <div>
-                                <h3 class="text-xl font-black uppercase italic">{{ $table->label }}</h3>
-                                <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
-                                    Début : {{ \Carbon\Carbon::parse($table->superTable->start_time)->format('H:i') }}
-                                </p>
-                            </div>
-                            <span class="bg-green-500/10 text-green-500 text-[10px] font-black px-3 py-1 rounded-full uppercase">Inscrit</span>
-                        </div>
-
-                        <div class="flex items-center gap-4 mb-6">
-                            <div class="text-[10px] text-gray-400 font-bold uppercase">Points : <span class="text-white">{{ $table->points_max }}</span></div>
-                            <div class="text-[10px] text-gray-400 font-bold uppercase">Frais : <span class="text-white">{{ $table->entry_fee }}€</span></div>
-                        </div>
-
-                        <form action="{{ route('player.unregister', $table->id) }}" method="POST">
-                            @csrf @method('DELETE')
-                            <button type="submit" class="w-full py-3 bg-white/5 hover:bg-red-500/10 text-gray-500 hover:text-red-500 border border-white/5 hover:border-red-500/20 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all">
-                                Se désinscrire
-                            </button>
-                        </form>
-                    </div>
-                @empty
-                    <div class="col-span-full py-12 text-center bg-[#0a0a0a] border border-white/5 rounded-[2rem]">
-                        <p class="text-gray-600 font-black uppercase text-xs tracking-widest italic">Tu n'es inscrit à aucun tableau pour le moment.</p>
-                    </div>
-                @endforelse
+        {{-- HEADER DU DASHBOARD --}}
+        <div class="mb-12">
+            <h1 class="text-4xl md:text-6xl font-[1000] uppercase italic tracking-tighter">
+                Mon Espace <span class="text-indigo-500">Joueur</span>
+            </h1>
+            <div class="flex items-center gap-4 mt-2">
+                <p class="text-gray-400 uppercase tracking-widest text-sm font-bold">
+                    {{ Auth::user()->name }} — {{ Auth::user()->points }} pts
+                </p>
+                <span class="h-px w-12 bg-white/10"></span>
+                <span class="text-indigo-400 text-xs font-black uppercase tracking-widest">Membre Officiel</span>
             </div>
         </div>
 
-        <div>
-            <h2 class="text-2xl font-black uppercase italic tracking-tighter mb-8 flex items-center gap-3">
-                <span class="w-2 h-8 bg-indigo-500 rounded-full"></span>
-                Tableaux Disponibles
-            </h2>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                @foreach($availableSubTables as $table)
-                    <div class="bg-[#0f0f0f] border border-white/5 p-6 rounded-[2rem] hover:border-indigo-500/30 transition-all group">
-                        <div class="flex justify-between items-start mb-4">
-                            <div>
-                                <h3 class="text-xl font-black uppercase italic group-hover:text-indigo-400 transition-colors">{{ $table->label }}</h3>
-                                <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest italic">
-                                    Horaire : {{ \Carbon\Carbon::parse($table->superTable->start_time)->format('H:i') }}
-                                </p>
-                            </div>
-                            <div class="text-right">
-                                <span class="block text-lg font-black text-indigo-500">{{ $table->entry_fee }}€</span>
-                            </div>
-                        </div>
-
-                        <div class="space-y-4">
-                            <div class="flex items-center justify-between p-3 bg-black rounded-xl border border-white/5">
-                                <span class="text-[10px] text-gray-500 font-black uppercase">Limite Classement</span>
-                                <span class="text-sm font-black italic">{{ $table->points_max }} pts</span>
-                            </div>
-
-                            @php
-                                // 1. Calculer si le créneau global est plein
-                                $currentTotal = $table->superTable->subTables->sum(fn($s) => $s->users->count());
-                                $isSuperFull = $currentTotal >= $table->superTable->max_players;
-                                
-                                // 2. Vérifier si le joueur a déjà 2 tableaux
-                                $hasReachedLimit = auth()->user()->subTables->count() >= 2;
-                            @endphp
-
-                            {{-- FORMULAIRE D'INSCRIPTION --}}
-                            <form action="{{ route('player.register', $table->id) }}" method="POST">
-                                @csrf
-                                <button type="submit" 
-                                    {{ ($isSuperFull || $hasReachedLimit) ? 'disabled' : '' }} 
-                                    class="w-full py-4 rounded-xl font-black uppercase text-[10px] tracking-[0.2em] transition-all
-                                    {{ ($isSuperFull || $hasReachedLimit) 
-                                        ? 'bg-gray-800 text-gray-500 cursor-not-allowed' 
-                                        : 'bg-indigo-600 hover:bg-white hover:text-black text-white shadow-lg shadow-indigo-500/10' 
-                                    }}">
-                                    
-                                    @if($isSuperFull)
-                                        Créneau Complet
-                                    @elseif($hasReachedLimit)
-                                        Limite 2 Tableaux Atteinte
-                                    @else
-                                        S'inscrire
-                                    @endif
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                @endforeach
+        {{-- SECTION 1 : MES ENGAGEMENTS --}}
+        <div class="mb-16">
+            <div class="flex justify-between items-center mb-8">
+                <h2 class="text-xl font-black uppercase italic tracking-tighter flex items-center gap-3">
+                    <span class="w-2 h-6 bg-indigo-500 rounded-full"></span>
+                    Mes Engagements <span class="text-gray-600 text-sm ml-2">({{ $myRegistrations->count() }})</span>
+                </h2>
             </div>
+
+            @if($myRegistrations->isEmpty())
+                <div class="bg-[#111] border border-white/5 rounded-3xl p-12 text-center">
+                    <p class="text-gray-500 font-medium italic">Tu n'es inscrit à aucun tableau pour le moment.</p>
+                </div>
+            @else
+                <div class="grid grid-cols-1 gap-4">
+                    @foreach($myRegistrations as $registration)
+                        <div class="group bg-[#111] border border-white/5 p-6 rounded-2xl flex flex-col md:flex-row md:items-center justify-between hover:border-indigo-500/50 transition-all duration-300">
+                            <div class="flex items-center gap-6">
+                                <div class="hidden sm:flex flex-col items-center justify-center bg-black/40 border border-white/5 px-4 py-2 rounded-xl min-w-[100px]">
+                                    <span class="text-[8px] text-gray-500 font-black uppercase tracking-tighter">Série</span>
+                                    <span class="text-xs font-bold text-indigo-400 uppercase text-center">{{ $registration->subTable->superTable->name }}</span>
+                                </div>
+
+                                <div>
+                                    <div class="flex items-center gap-3 mb-1">
+                                        <h3 class="text-2xl font-[1000] uppercase italic tracking-tighter group-hover:text-indigo-400 transition-colors">
+                                            {{ $registration->subTable->label }}
+                                        </h3>
+                                        
+                                        @if($registration->status === 'confirmed')
+                                            <span class="bg-green-500/10 text-green-500 text-[9px] font-black uppercase px-2 py-0.5 rounded-md border border-green-500/20">Confirmé</span>
+                                        @elseif($registration->status === 'waiting_list')
+                                            <span class="bg-orange-500/10 text-orange-500 text-[9px] font-black uppercase px-2 py-0.5 rounded-md border border-orange-500/20">Liste d'attente</span>
+                                        @endif
+                                    </div>
+                                    
+                                    <div class="flex flex-wrap items-center gap-y-1 gap-x-3 text-gray-500 text-[10px] uppercase font-bold tracking-widest">
+                                        <span class="text-white/60">{{ $registration->subTable->superTable->tournament->name }}</span>
+                                        <span class="text-gray-800">/</span>
+                                        <span class="flex items-center gap-1">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                            Début : {{ \Carbon\Carbon::parse($registration->subTable->superTable->start_time)->format('H:i') }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-6 md:mt-0 flex items-center justify-between md:justify-end gap-8">
+                                <div class="text-right">
+                                    <p class="text-gray-500 text-[9px] font-black uppercase tracking-widest leading-none">Frais</p>
+                                    <p class="text-2xl font-black text-white italic">{{ number_format($registration->subTable->entry_fee, 2) }}€</p>
+                                </div>
+                                
+                                <form action="{{ route('player.unregister', $registration->subTable->id) }}" method="POST" onsubmit="return confirm('Désinscription ?');">
+                                    @csrf @method('DELETE')
+                                    <button type="submit" class="bg-white/5 hover:bg-red-600 hover:text-white text-gray-500 p-4 rounded-xl transition-all border border-white/5">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+                
+                <div class="mt-8 bg-indigo-600 p-6 rounded-2xl flex justify-between items-center shadow-2xl shadow-indigo-600/20 border border-white/10">
+                    <div class="flex items-center gap-4">
+                        <div class="p-3 bg-white/10 rounded-xl">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                        </div>
+                        <span class="font-black uppercase italic tracking-tighter text-lg">Total à régler sur place</span>
+                    </div>
+                    <span class="text-4xl font-[1000] italic">{{ $totalToPay }}€</span>
+                </div>
+            @endif
+        </div>
+
+        {{-- SECTION 2 : DISPONIBLES --}}
+        <div>
+            <div class="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
+                <div>
+                    <h2 class="text-xl font-black uppercase italic tracking-tighter flex items-center gap-3">
+                        <span class="w-2 h-6 bg-green-500 rounded-full"></span>
+                        Tableaux Disponibles
+                    </h2>
+                    <p class="text-[10px] text-gray-500 uppercase font-bold tracking-widest mt-2">
+                        Règle du tournoi : <span class="text-indigo-400">Maximum 2 tableaux par joueur</span>
+                    </p>
+                </div>
+
+                @if($myRegistrations->count() >= 2)
+                    <div class="bg-orange-500/10 border border-orange-500/20 px-4 py-2 rounded-lg flex items-center gap-3">
+                        <span class="relative flex h-2 w-2">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
+                        </span>
+                        <p class="text-[10px] font-black uppercase text-orange-500 tracking-tighter">
+                            Tu as atteint la limite de 2 tableaux
+                        </p>
+                    </div>
+                @endif
+            </div>
+
+            @if($availableSubTables->isEmpty())
+                <div class="bg-[#111] border border-white/5 rounded-3xl p-12 text-center text-gray-500 italic">
+                    Aucun nouveau tableau disponible.
+                </div>
+            @else
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    @foreach($availableSubTables as $subTable)
+                        <div class="bg-[#111] border border-white/5 p-8 rounded-[2rem] hover:border-green-500/50 transition-all flex flex-col justify-between group">
+                            <div>
+                                <div class="flex justify-between items-start mb-2">
+                                    <h3 class="text-3xl font-[1000] uppercase italic leading-none group-hover:text-green-500 transition-colors">
+                                        {{ $subTable->label }}
+                                    </h3>
+                                    <span class="text-green-500 font-black italic text-lg">{{ number_format($subTable->entry_fee, 2) }}€</span>
+                                </div>
+                                
+                                <div class="mb-6">
+                                    <p class="text-indigo-500 text-[10px] font-black uppercase tracking-[0.2em]">{{ $subTable->superTable->tournament->name }}</p>
+                                </div>
+
+                                <div class="space-y-2 mb-8 border-t border-white/5 pt-4 text-[10px] font-black uppercase">
+                                    <div class="flex justify-between text-gray-600">
+                                        <span>Points</span>
+                                        <span class="text-white">{{ $subTable->points_min }} - {{ $subTable->points_max }}</span>
+                                    </div>
+                                    <div class="flex justify-between text-gray-600">
+                                        <span>Début</span>
+                                        <span class="text-white">{{ \Carbon\Carbon::parse($subTable->superTable->start_time)->format('H:i') }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            @if($myRegistrations->count() >= 2)
+                                <button disabled class="w-full bg-white/5 text-gray-600 font-[1000] py-4 rounded-2xl uppercase tracking-widest text-xs cursor-not-allowed border border-white/5">
+                                    Limite atteinte
+                                </button>
+                            @else
+                                <form action="{{ route('player.register', $subTable->id) }}" method="POST">
+                                    @csrf
+                                    <button type="submit" class="w-full bg-white text-black font-[1000] py-4 rounded-2xl uppercase tracking-widest text-xs hover:bg-green-500 hover:text-white transition-all transform hover:scale-[1.02]">
+                                        S'inscrire
+                                    </button>
+                                </form>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+            @endif
         </div>
 
     </div>

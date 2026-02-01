@@ -1,77 +1,96 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="min-h-screen pt-32 pb-20 bg-black relative flex items-center">
-    
-    <div class="absolute inset-0 z-0">
-        <img src="{{ asset('images/salle2.jpg') }}" class="w-full h-full object-cover opacity-10 grayscale">
-        <div class="absolute inset-0 bg-gradient-to-b from-black via-transparent to-black"></div>
-    </div>
+<div class="min-h-screen bg-[#0a0a0a] text-white pt-24 pb-12">
+    <div class="max-w-3xl mx-auto px-6">
+        
+        <div class="mb-10">
+            <a href="{{ route('admin.tournaments.index') }}" class="text-gray-500 hover:text-white text-xs uppercase font-black tracking-widest flex items-center gap-2 mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor text-indigo-500">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Retour à la liste
+            </a>
+            <h1 class="text-4xl font-[1000] uppercase italic tracking-tighter">Créer un <span class="text-indigo-500">Tournoi</span></h1>
+        </div>
 
-    <div class="relative z-10 max-w-4xl mx-auto px-6 w-full">
-        <div class="bg-[#1a1a1a] border border-white/10 p-8 md:p-12 rounded-3xl shadow-2xl">
-            
-            <div class="mb-12 flex justify-between items-end">
-                <div>
-                    <h2 class="text-4xl font-black text-white uppercase italic tracking-tighter">
-                        Initialiser <span class="text-indigo-500">un Tournoi</span>
-                    </h2>
-                    <p class="text-gray-500 text-sm mt-2 uppercase tracking-widest font-bold">// ESPACE ADMINISTRATION</p>
+        {{-- AFFICHAGE DES ERREURS --}}
+        @if ($errors->any())
+            <div class="mb-8 bg-red-500/10 border border-red-500/20 p-6 rounded-2xl">
+                <div class="flex items-center gap-3 mb-3 text-red-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                    </svg>
+                    <span class="font-black uppercase italic">Erreur de validation</span>
                 </div>
-                <a href="{{ route('admin.tournaments.index') }}" class="text-xs text-gray-50 hover:text-white uppercase tracking-widest transition border-b border-white/10 pb-1">
-                    Retour à la liste
-                </a>
+                <ul class="text-red-400/80 text-sm space-y-1 ml-8 list-disc">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        <form action="{{ route('admin.tournaments.store') }}" method="POST" class="space-y-6">
+            @csrf
+
+            <div class="bg-[#111] border border-white/5 p-8 rounded-[2rem] space-y-6">
+                
+                {{-- NOM DU TOURNOI --}}
+                <div>
+                    <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Nom de l'évènement</label>
+                    <input type="text" name="name" value="{{ old('name') }}" required 
+                        class="w-full bg-black border-white/10 rounded-xl px-4 py-3 text-white focus:border-indigo-500 focus:ring-0 transition-all"
+                        placeholder="Ex: National Tennis de Table 2026">
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {{-- DATE DU TOURNOI --}}
+                    <div>
+                        <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Date du tournoi</label>
+                        <input type="date" name="date" value="{{ old('date') }}" required 
+                            class="w-full bg-black border-white/10 rounded-xl px-4 py-3 text-white focus:border-indigo-500 focus:ring-0 transition-all">
+                    </div>
+
+                    {{-- DATE LIMITE --}}
+                    <div>
+                        <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Limite d'inscription</label>
+                        <input type="date" name="registration_deadline" value="{{ old('registration_deadline') }}" required 
+                            class="w-full bg-black border-white/10 rounded-xl px-4 py-3 text-white focus:border-indigo-500 focus:ring-0 transition-all">
+                    </div>
+                </div>
+
+                {{-- LIEU --}}
+                <div>
+                    <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Lieu / Ville</label>
+                    <input type="text" name="location" value="{{ old('location') }}" required 
+                        class="w-full bg-black border-white/10 rounded-xl px-4 py-3 text-white focus:border-indigo-500 focus:ring-0 transition-all"
+                        placeholder="Ex: Gymnase municipal, Caen">
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {{-- EMAIL --}}
+                    <div>
+                        <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Email de contact</label>
+                        <input type="email" name="contact_email" value="{{ old('contact_email') }}" required 
+                            class="w-full bg-black border-white/10 rounded-xl px-4 py-3 text-white focus:border-indigo-500 focus:ring-0 transition-all"
+                            placeholder="organisateur@club.fr">
+                    </div>
+
+                    {{-- POINTS MAX (Optionnel) --}}
+                    <div>
+                        <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Points Max Autorisés</label>
+                        <input type="number" name="max_points_allowed" value="{{ old('max_points_allowed') }}" 
+                            class="w-full bg-black border-white/10 rounded-xl px-4 py-3 text-white focus:border-indigo-500 focus:ring-0 transition-all"
+                            placeholder="Ex: 2000">
+                    </div>
+                </div>
             </div>
 
-            <form method="POST" action="{{ route('admin.tournaments.store') }}" class="space-y-8">
-                @csrf
-
-                <div>
-                    <x-input-label for="name" :value="__('Nom de l\'événement')" class="text-gray-50 mb-3 uppercase text-xs tracking-[0.2em] font-bold" />
-                    <x-text-input id="name" 
-                        class="block w-full bg-black/50 border-white/10 text-white placeholder:text-gray-700 rounded-2xl py-4 px-6 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-xl" 
-                        type="text" name="name" :value="old('name')" 
-                        required autofocus placeholder="Ex: OPEN DE NORMANDIE 2026" />
-                    <x-input-error :messages="$errors->get('name')" class="mt-2 text-xs text-red-500 font-bold uppercase" />
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div>
-                        <x-input-label for="date" :value="__('Date du tournoi')" class="text-gray-50 mb-3 uppercase text-xs tracking-[0.2em] font-bold" />
-                        <x-text-input id="date" 
-                            class="block w-full bg-black/50 border-white/10 text-white rounded-2xl py-4 px-6 focus:ring-indigo-500 focus:border-indigo-500 transition-all" 
-                            type="date" name="date" :value="old('date')" required />
-                        <x-input-error :messages="$errors->get('date')" class="mt-2 text-xs text-red-500 font-bold uppercase" />
-                    </div>
-
-                    <div>
-                        <x-input-label for="location" :value="__('Lieu')" class="text-gray-50 mb-3 uppercase text-xs tracking-[0.2em] font-bold" />
-                        <x-text-input id="location" 
-                            class="block w-full bg-black/50 border-white/10 text-white rounded-2xl py-4 px-6 focus:ring-indigo-500 focus:border-indigo-500 transition-all" 
-                            type="text" name="location" :value="old('location', 'Ouistreham')" required />
-                        <x-input-error :messages="$errors->get('location')" class="mt-2 text-xs text-red-500 font-bold uppercase" />
-                    </div>
-                </div>
-
-                <div class="mt-8">
-                    <x-input-label for="contact_email" :value="__('Email de contact')" class="text-gray-50 mb-3 uppercase text-xs tracking-[0.2em] font-bold" />
-                    <x-text-input id="contact_email" 
-                        class="block w-full bg-black/50 border-white/10 text-white rounded-2xl py-4 px-6 focus:ring-indigo-500 focus:border-indigo-500 transition-all" 
-                        type="email" name="contact_email" :value="old('contact_email')" required />
-                    <x-input-error :messages="$errors->get('contact_email')" class="mt-2 text-xs text-red-500 font-bold uppercase" />
-                </div>
-
-                <div class="pt-10 border-t border-white/5">
-                    <button type="submit" class="w-full bg-white text-black font-black uppercase text-sm tracking-[0.3em] py-5 rounded-full hover:bg-indigo-600 hover:text-white transition-all duration-500 shadow-xl transform hover:-translate-y-1">
-                        {{ __('Enregistrer et configurer les tableaux') }}
-                    </button>
-                    <p class="text-center text-gray-600 text-[10px] uppercase tracking-widest mt-6 font-bold">
-                        Une fois créé, vous pourrez définir les catégories de points et les tarifs.
-                    </p>
-                </div>
-            </form>
-
-        </div>
+            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-5 rounded-2xl uppercase italic tracking-widest transition-all shadow-xl shadow-indigo-600/20">
+                Créer et passer à la configuration
+            </button>
+        </form>
     </div>
 </div>
 @endsection

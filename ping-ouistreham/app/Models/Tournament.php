@@ -6,17 +6,32 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Support\Str;
 
 class Tournament extends Model
 {
-    protected $fillable = [
-        'user_id', 'name', 'slug', 'date', 'location', 
-        'latitude', 'longitude', 'contact_email', 
-        'registration_deadline', 'max_points_allowed', 
-        'is_published', 'status'
-    ];
+protected $fillable = [
+    'user_id', 'name', 'slug', 'date', 'location', 
+    'contact_email', 'registration_deadline', 
+    'max_points_allowed', 'is_published', 'status',
+    'latitude', 'longitude', 'description', 'status' // Ajoute ceux-là si ils sont dans ta table
+];
 
-    // L'organisateur du tournoi
+    /**
+     * Boot function pour gérer la logique automatique.
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Génération automatique du slug avant la création en base
+        static::creating(function ($tournament) {
+            if (empty($tournament->slug)) {
+                $tournament->slug = Str::slug($tournament->name) . '-' . rand(1000, 9999);
+            }
+        });
+    }
+
     public function organizer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
@@ -27,10 +42,15 @@ class Tournament extends Model
         return $this->hasMany(SuperTable::class);
     }
 
-    // Relation magique pour obtenir tous les inscrits du tournoi sans passer par les boucles
     public function registrations(): HasManyThrough
     {
-        return $this->hasManyThrough(Registration::class, SubTable::class, 'super_table_id', 'sub_table_id');
-        // Note: Cette relation nécessite que SubTable appartienne à SuperTable
+        // On récupère les inscriptions à travers les séries (SubTables)
+        return $this->hasManyThrough(Registration::class, SubTable::class);
     }
+    // Dans app/Models/Tournament.php
+    public function getRouteKeyName()
+    {
+        return 'slug';
+    }
+    
 }

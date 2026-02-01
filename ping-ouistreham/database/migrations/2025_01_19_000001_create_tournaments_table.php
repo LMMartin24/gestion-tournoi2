@@ -27,7 +27,7 @@ return new class extends Migration
             // Utilisé pour le calcul de distance (ex: "Tournois à moins de 50km")
             $table->decimal('latitude', 10, 8)->nullable();
             $table->decimal('longitude', 11, 8)->nullable();
-
+            
             // --- CONTACT & LOGISTIQUE ---
             $table->string('contact_email')->nullable();
             $table->timestamp('registration_deadline'); // Date et heure de fin des inscriptions

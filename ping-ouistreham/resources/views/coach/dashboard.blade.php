@@ -1,145 +1,140 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="min-h-screen  bg-black pt-24 pb-12 px-6">
+<div class="min-h-screen bg-black pt-32 pb-20 px-6">
     <div class="max-w-7xl mx-auto">
         
-        {{-- BLOC CRÉATION ÉLÈVE --}}
-        <div class="max-w-4xl mt-12 mx-auto">
-            <div class="bg-[#0f0f0f] border border-white/5 p-8 rounded-[2rem] shadow-2xl">
-                <div class="flex items-center justify-between mb-8">
-                    <h2 class="text-xl font-black uppercase italic text-white flex items-center gap-3">
-                        <span class="w-1.5 h-6 bg-indigo-600 rounded-full"></span>
-                        Créer un compte élève
-                    </h2>
-                </div>
-                
-                <form action="{{ route('coach.add_student') }}" method="POST">
-                    @csrf
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="flex flex-col gap-2">
-                            <label class="text-s uppercase font-black text-white  tracking-widest ml-1">Nom du joueur</label>
-                            <input type="text" name="name" required class="bg-black border border-white/10 rounded-xl px-5 py-4 text-white text-sm outline-none focus:border-indigo-500 transition-all">
-                        </div>
-                        <div class="flex flex-col gap-2">
-                            <label class="text-s uppercase font-black text-white  tracking-widest ml-1">N° Licence</label>
-                            <input type="text" name="license_number" required class="bg-black border border-white/10 rounded-xl px-5 py-4 text-white text-sm outline-none focus:border-indigo-500 transition-all">
-                        </div>
-                        <div class="flex flex-col gap-2">
-                            <label class="text-s uppercase font-black text-white  tracking-widest ml-1">Adresse Email</label>
-                            <input type="email" name="email" required class="bg-black border border-white/10 rounded-xl px-5 py-4 text-white text-sm outline-none focus:border-indigo-500 transition-all">
-                        </div>
-                        <div class="flex flex-col gap-2">
-                            <label class="text-s uppercase font-black text-white  tracking-widest ml-1">Mot de passe provisoire</label>
-                            <input type="password" name="password" required class="bg-black border border-white/10 rounded-xl px-5 py-4 text-white text-sm outline-none focus:border-indigo-500 transition-all">
-                        </div>
-                    </div>
-                    <button type="submit" class="w-full mt-8 bg-indigo-600 hover:bg-white hover:text-black text-white font-black uppercase text-[11px] tracking-[0.3em] py-5 rounded-2xl transition-all duration-300">
-                        Créer le compte et lier l'élève
-                    </button>
-                </form>
+        <div class="mb-16 flex flex-col md:flex-row justify-between items-end gap-6">
+            <div>
+                <h2 class="text-5xl font-black uppercase italic tracking-tighter text-white">
+                    MANAGEMENT <span class="text-indigo-500">D'ÉQUIPE</span>
+                </h2>
+                <p class="text-gray-500 text-xs mt-2 uppercase tracking-widest font-bold">
+                    // {{ auth()->user()->club ?? 'SANS CLUB' }} — {{ auth()->user()->students->count() }} ÉLÈVES
+                </p>
             </div>
-
-            {{-- LISTE ÉLÈVES --}}
-            <div class="mt-12">
-                <h3 class="text-white text-xl uppercase font-black italic mb-4 text-sm tracking-widest">Mes élèves enregistrés</h3>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    @forelse($myPlayers as $player)
-                        <div class="bg-[#0f0f0f] border border-white/5 p-4 rounded-2xl flex justify-between items-center group">
-                            <div class="flex flex-col">
-                                <span class="text-white font-bold text-s uppercase group-hover:text-indigo-400">{{ $player->name }}</span>
-                                <span class="text-gray-600 text-[15px]">{{ $player->email }}</span>
-                            </div>
-                            <span class="text-white  text-s font-mono">{{ $player->license_number }}</span>
-                        </div>
-                    @empty
-                        <p class="text-white  text-xs uppercase py-8 text-center border border-dashed border-white/10 rounded-2xl col-span-2">Aucun élève</p>
-                    @endforelse
-                </div>
-            </div>
+            
+            <a href="#add-student" class="bg-white/5 border border-white/10 text-white px-8 py-4 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all">
+                + Ajouter un nouvel élève
+            </a>
         </div>
 
-        <hr class="my-16 border-white/5">
+        <div class="mb-20">
+            <h3 class="text-2xl font-black uppercase italic mb-8 text-white flex items-center gap-3">
+                <span class="w-2 h-8 bg-indigo-600 rounded-full"></span>
+                Inscrire mon équipe
+            </h3>
 
-        {{-- GRILLE DES TABLEAUX --}}
-        <h2 class="text-2xl font-black uppercase italic mb-8 text-white flex items-center gap-3">
-            <span class="w-2 h-8 bg-indigo-600 rounded-full"></span>
-            Inscrire mon équipe
-        </h2>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            @forelse($availableSubTables as $table)
-                <div class="bg-[#0f0f0f] border border-white/5 p-6 rounded-[2rem] shadow-xl flex flex-col justify-between">
-                    <div>
-                        <div class="flex justify-between items-start mb-4">
-                            <h3 class="text-xl font-black uppercase italic text-white">{{ $table->label }}</h3>
-                            <span class="text-s font-bold px-3 py-1 bg-white/5 rounded-full text-gray-400 border border-white/5">
-                                {{ $table->points_max }} pts max
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                @forelse($availableSubTables as $table)
+                    <div class="bg-[#0f0f0f] border border-white/5 p-8 rounded-[2.5rem] shadow-2xl flex flex-col group hover:border-indigo-500/30 transition-all">
+                        
+                        <div class="flex justify-between items-start mb-6">
+                            <div>
+                                <h3 class="text-2xl font-black uppercase italic text-white group-hover:text-indigo-400 transition-colors">{{ $table->label }}</h3>
+                                <p class="text-[10px] text-gray-500 font-bold mt-1 uppercase italic tracking-widest">
+                                    {{ \Carbon\Carbon::parse($table->superTable->start_time)->format('H:i') }} — {{ $table->entry_fee }}€
+                                </p>
+                            </div>
+                            <span class="text-[10px] font-black px-3 py-1 bg-indigo-500/10 rounded-full text-indigo-500 border border-indigo-500/20 uppercase">
+                                {{ $table->points_max }} pts
                             </span>
                         </div>
 
-                        {{-- Badges des inscrits CLIQUABLES pour désinscription --}}
-                        <div class="flex flex-wrap gap-2 mb-6 min-h-[24px]">
+                        <div class="flex flex-wrap gap-2 mb-8 min-h-[32px]">
                             @php
-                                $teamIds = $myPlayers->pluck('id')->push(auth()->id());
+                                $teamIds = auth()->user()->students->pluck('id')->push(auth()->id());
                                 $teamInscribed = $table->users->whereIn('id', $teamIds);
                             @endphp
 
                             @foreach($teamInscribed as $inscribed)
                                 <button type="button" 
                                     onclick="confirmUnregister('{{ $inscribed->id }}', '{{ $table->id }}', '{{ $inscribed->name }}')"
-                                    class="flex items-center gap-1.5 text-[9px] bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2.5 py-1 rounded-lg font-black uppercase tracking-wider hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 transition-all group/badge"
-                                    title="Cliquer pour désinscrire">
-                                    <span class="w-1 h-1 bg-indigo-400 rounded-full group-hover/badge:bg-red-400"></span>
+                                    class="flex items-center gap-2 text-[9px] bg-white/5 text-gray-400 border border-white/5 px-3 py-1.5 rounded-xl font-black uppercase tracking-widest hover:bg-red-500/20 hover:text-red-500 hover:border-red-500/30 transition-all group/badge">
+                                    <span class="w-1 h-1 bg-green-500 rounded-full group-hover/badge:bg-red-500"></span>
                                     {{ $inscribed->name }}
-                                    <span class="hidden group-hover/badge:inline ml-1 text-[12px]">&times;</span>
+                                    <span class="opacity-0 group-hover/badge:opacity-100 ml-1 text-xs">×</span>
                                 </button>
                             @endforeach
                         </div>
 
-                        @include('partials.progression-bar', ['table' => $table])
+                        <form action="{{ route('coach.register_player') }}" method="POST" class="mt-auto pt-6 border-t border-white/5">
+                            @csrf
+                            <input type="hidden" name="sub_table_id" value="{{ $table->id }}">
+                            
+                            <div class="space-y-4">
+                                <select name="player_id" required class="w-full bg-black border border-white/10 rounded-2xl px-5 py-4 text-white text-[10px] font-black uppercase tracking-widest focus:border-indigo-500 outline-none transition-all">
+                                    <option value="" disabled selected>Choisir un joueur...</option>
+                                    @if(auth()->user()->points <= $table->points_max)
+                                        <option value="{{ auth()->id() }}">Moi-même (Coach) - {{ auth()->user()->points }} pts</option>
+                                    @endif
+                                    @foreach(auth()->user()->students as $student)
+                                        @php 
+                                            $isFull = $student->subTables->count() >= 2;
+                                            $tooManyPoints = $student->points > $table->points_max;
+                                        @endphp
+                                        <option value="{{ $student->id }}" {{ ($isFull || $tooManyPoints) ? 'disabled' : '' }}>
+                                            {{ $student->name }} ({{ $student->points }} pts) {{ $isFull ? '[MAX 2]' : ($tooManyPoints ? '[POINTS TROP ÉLEVÉS]' : '') }}
+                                        </option>
+                                    @endforeach
+                                </select>
+
+                                <button type="submit" class="w-full bg-indigo-600 hover:bg-white hover:text-black text-white font-black uppercase text-[10px] tracking-[0.3em] py-5 rounded-2xl transition-all shadow-lg shadow-indigo-500/10">
+                                    Valider l'inscription
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                @empty
+                    <div class="col-span-full py-20 text-center border-2 border-dashed border-white/5 rounded-[3rem]">
+                        <p class="text-gray-700 uppercase font-black tracking-[0.4em] text-sm italic">Aucune compétition ouverte</p>
+                    </div>
+                @endforelse
+            </div>
+        </div>
+
+        <div id="add-student" class="max-w-3xl mx-auto">
+            <div class="bg-[#1a1a1a] border border-white/10 p-10 rounded-[3rem] shadow-3xl">
+                <div class="mb-8">
+                    <h2 class="text-3xl font-black uppercase italic text-white tracking-tighter">
+                        NOUVEL <span class="text-indigo-500">ÉLÈVE</span>
+                    </h2>
+                    <p class="text-gray-600 text-[10px] uppercase font-bold tracking-widest mt-1 italic">// CRÉATION DE COMPTE AUTOMATIQUE</p>
+                </div>
+
+                <form action="{{ route('coach.add_student') }}" method="POST" class="space-y-6">
+                    @csrf
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="text-[10px] uppercase font-black text-gray-400 tracking-widest ml-1 mb-2 block">Nom complet</label>
+                            <input type="text" name="name" required placeholder="EX: JEAN DUPONT" class="w-full bg-black border border-white/10 rounded-2xl px-6 py-4 text-white text-sm focus:border-indigo-500 transition-all">
+                        </div>
+                        <div>
+                            <label class="text-[10px] uppercase font-black text-gray-400 tracking-widest ml-1 mb-2 block">N° Licence</label>
+                            <input type="text" name="license_number" required placeholder="EX: 1422334" class="w-full bg-black border border-white/10 rounded-2xl px-6 py-4 text-white text-sm focus:border-indigo-500 transition-all">
+                        </div>
+                        <div>
+                            <label class="text-[10px] uppercase font-black text-gray-400 tracking-widest ml-1 mb-2 block">Points FFTT</label>
+                            <input type="number" name="points" required placeholder="500" class="w-full bg-black border border-white/10 rounded-2xl px-6 py-4 text-white text-sm focus:border-indigo-500 transition-all">
+                        </div>
+                        <div>
+                            <label class="text-[10px] uppercase font-black text-gray-400 tracking-widest ml-1 mb-2 block">Email (ou celui du coach)</label>
+                            <input type="email" name="email" required value="{{ auth()->user()->email }}" class="w-full bg-black border border-white/10 rounded-2xl px-6 py-4 text-white text-sm focus:border-indigo-500 transition-all">
+                        </div>
                     </div>
 
-                    <form action="{{ route('coach.register_player') }}" method="POST" class="mt-8 space-y-4 border-t border-white/5 pt-6">
-                        @csrf
-                        <input type="hidden" name="sub_table_id" value="{{ $table->id }}">
-                        
-                        <div class="flex flex-col gap-2">
-                            <label class="text-[9px] uppercase font-black text-white  tracking-widest ml-1">Sélectionner le joueur</label>
-                            <select name="player_id" class="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-white text-xs font-bold uppercase outline-none focus:border-indigo-500 transition-all cursor-pointer">
-                                <option value="{{ auth()->id() }}">Moi-même (Coach)</option>
-                                @foreach($myPlayers as $player)
-                                    @php $isPlayerFull = $player->subTables->count() >= 2; @endphp
-                                    <option value="{{ $player->id }}" {{ $isPlayerFull ? 'disabled' : '' }}>
-                                        {{ $player->name }} {{ $isPlayerFull ? '(LIMITE 2/2)' : '' }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        @php
-                            $currentTotal = $table->superTable->subTables->sum(fn($s) => $s->users->count());
-                            $isSuperFull = $currentTotal >= $table->superTable->max_players;
-                        @endphp
-
-                        <button type="submit" {{ $isSuperFull ? 'disabled' : '' }}
-                            class="w-full mt-4 {{ $isSuperFull ? 'bg-red-900/50 text-gray-400' : 'bg-indigo-600 hover:bg-white hover:text-black text-white' }} font-black uppercase text-s tracking-[0.2em] py-4 rounded-xl transition-all">
-                            {{ $isSuperFull ? 'Complet (' . $currentTotal . '/' . $table->superTable->max_players . ')' : 'Valider l\'inscription' }}
-                        </button>
-                    </form>
-                </div>
-            @empty
-                <div class="col-span-full py-20 text-center border border-dashed border-white/5 rounded-[3rem]">
-                    <p class="text-gray-600 uppercase font-black tracking-[0.3em] text-sm">Aucun tableau disponible</p>
-                </div>
-            @endforelse
+                    <button type="submit" class="w-full bg-white text-black font-black uppercase text-xs tracking-[0.3em] py-6 rounded-2xl hover:bg-indigo-600 hover:text-white transition-all duration-500 transform hover:-translate-y-1 shadow-xl">
+                        Enregistrer dans mon groupe
+                    </button>
+                </form>
+            </div>
         </div>
 
     </div>
 </div>
 
 {{-- Formulaire caché pour la désinscription --}}
-<form id="unregister-form" action="{{ route('coach.unregister_player') }}" method="POST" style="display: none;">
+<form id="unregister-form" action="{{ route('coach.unregister_player') }}" method="POST" class="hidden">
     @csrf
     <input type="hidden" name="player_id" id="unreg-player-id">
     <input type="hidden" name="sub_table_id" id="unreg-table-id">
@@ -147,7 +142,7 @@
 
 <script>
 function confirmUnregister(playerId, tableId, playerName) {
-    if (confirm("Êtes-vous sûr de vouloir désinscrire " + playerName + " ?")) {
+    if (confirm("Désinscrire " + playerName.toUpperCase() + " de ce tableau ?")) {
         document.getElementById('unreg-player-id').value = playerId;
         document.getElementById('unreg-table-id').value = tableId;
         document.getElementById('unregister-form').submit();

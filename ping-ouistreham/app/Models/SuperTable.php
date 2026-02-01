@@ -11,8 +11,14 @@ class SuperTable extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['tournament_id', 'name', 'date', 'start_time', 'max_players', 'description'];
-
+    protected $fillable = [
+        'tournament_id', 
+        'name', 
+        'date', 
+        'start_time', 
+        'max_players', 
+        'description'
+    ];
     public function tournament(): BelongsTo
     {
         return $this->belongsTo(Tournament::class);
@@ -41,4 +47,6 @@ class SuperTable extends Model
     {
         return $this->currentPlayersCount() >= $this->max_players;
     }
+
+    
 }
