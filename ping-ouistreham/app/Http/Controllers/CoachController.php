@@ -103,16 +103,17 @@ class CoachController extends Controller
         ]);
 
         $subTable = SubTable::with('superTable.tournament')->findOrFail($request->sub_table_id);
+        $superTable = $subTable->superTable;
         $player = User::findOrFail($request->player_id);
         $coach = auth()->user();
 
         // 1. SÉCURITÉ : Date limite de clôture
         if (now()->gt($subTable->superTable->tournament->registration_deadline)) {
-            $dateFormatted = Carbon::parse($subTable->superTable->tournament->registration_deadline)->format('d/m/Y H:i');
+            $dateFormatted = \Carbon\Carbon::parse($subTable->superTable->tournament->registration_deadline)->format('d/m/Y H:i');
             return back()->with('error', "Inscriptions impossibles : la date limite était le $dateFormatted.");
         }
 
-        // 2. SÉCURITÉ : Propriété de l'élève
+        // 2. SÉCURITÉ : Propriété de l'élève (Coach ou lui-même)
         if ($player->coach_id !== $coach->id && $player->id !== $coach->id) {
             return back()->with('error', "Vous n'avez pas l'autorisation pour ce joueur.");
         }
@@ -130,23 +131,35 @@ class CoachController extends Controller
 
         // 4. CONFLIT HORAIRE : Un seul tableau par bloc (SuperTable)
         $hasConflict = Registration::where('user_id', $player->id)
-            ->whereHas('subTable', function($q) use ($subTable) {
-                $q->where('super_table_id', $subTable->super_table_id);
+            ->whereHas('subTable', function($q) use ($superTable) {
+                $q->where('super_table_id', $superTable->id);
             })->exists();
 
         if ($hasConflict) {
             return back()->with('error', "{$player->name} est déjà inscrit sur ce créneau horaire.");
         }
 
-        // 5. NIVEAU : Vérification des points (snapshot à l'inscription)
+        // 5. NIVEAU : Vérification des points
         if ($player->points > $subTable->points_max || $player->points < $subTable->points_min) {
             return back()->with('error', "Le classement de {$player->name} ({$player->points} pts) ne correspond pas à ce tableau.");
         }
 
-        // 6. CAPACITÉ : Gestion de la liste d'attente
-        $status = $subTable->superTable->isFull() ? 'waiting_list' : 'confirmed';
+        // 6. CAPACITÉ : Vérification du nombre d'inscrits CONFIRMÉS sur le SuperTable
+        $currentInscriptionsCount = Registration::whereHas('subTable', function($q) use ($superTable) {
+                $q->where('super_table_id', $superTable->id);
+            })
+            ->where('status', 'confirmed')
+            ->count();
 
-        // 7. CRÉATION : Snapshot des données du joueur au moment de l'inscription
+        // On détermine le statut selon la limite du SuperTable
+        $status = ($currentInscriptionsCount < $superTable->max_players) ? 'confirmed' : 'waiting_list';
+
+        // 7. PRÉPARATION DES DONNÉES (Nom/Prénom pour l'export)
+        $nameParts = explode(' ', trim($player->name));
+        $firstname = $nameParts[0];
+        $lastname = count($nameParts) > 1 ? implode(' ', array_slice($nameParts, 1)) : '';
+
+        // 8. CRÉATION
         Registration::create([
             'user_id' => $player->id,
             'sub_table_id' => $subTable->id,
@@ -154,13 +167,17 @@ class CoachController extends Controller
             'status' => $status,
             'player_license' => $player->license_number,
             'player_points' => $player->points,
+            'player_firstname' => $firstname,
+            'player_lastname' => $lastname,
             'registered_at' => now(),
         ]);
 
-        $msg = ($status === 'confirmed') ? "Inscription confirmée." : "Placé en liste d'attente.";
-        return back()->with('success', "{$player->name} : $msg");
+        if ($status === 'confirmed') {
+            return back()->with('success', "{$player->name} est inscrit avec succès !");
+        } else {
+            return back()->with('error', "Attention : {$player->name} a été placé en LISTE D'ATTENTE (Tableau complet).");
+        }
     }
-
     /**
      * Désinscrit un joueur.
      */

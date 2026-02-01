@@ -43,74 +43,86 @@ class DashboardController extends Controller
     }
 
     /**
-     * Gère l'inscription d'un joueur à un tableau avec une limite de 2.
+     * Gère l'inscription d'un joueur individuel (Dashboard classique).
      */
     public function register(Request $request, SubTable $subTable)
     {
         $user = Auth::user();
-        $tournament = $subTable->superTable->tournament;
+        $superTable = $subTable->superTable;
+        $tournament = $superTable->tournament;
 
-        // 1. LIMITE DE 2 TABLEAUX PAR TOURNOI
-        // On compte combien d'inscriptions l'utilisateur possède déjà pour ce tournoi précis
+        // 1. SÉCURITÉ : Date limite de clôture
+        if (now()->gt($tournament->registration_deadline)) {
+            $dateFormatted = \Carbon\Carbon::parse($tournament->registration_deadline)->format('d/m/Y H:i');
+            return back()->with('error', "Trop tard ! Les inscriptions sont fermées depuis le $dateFormatted.");
+        }
+
+        // 2. LIMITE DE 2 TABLEAUX PAR TOURNOI
         $registrationsInThisTournament = Registration::where('user_id', $user->id)
             ->whereHas('subTable.superTable', function($q) use ($tournament) {
                 $q->where('tournament_id', $tournament->id);
             })->count();
 
         if ($registrationsInThisTournament >= 2) {
-            return back()->with('error', 'Limite atteinte : Tu ne peux pas t\'inscrire à plus de 2 tableaux pour ce tournoi.');
+            return back()->with('error', 'Limite atteinte : Tu es déjà inscrit à 2 tableaux pour ce tournoi.');
         }
 
-        // 2. VÉRIFICATION DES POINTS
+        // 3. VÉRIFICATION DES POINTS
         if ($user->points > $subTable->points_max || $user->points < $subTable->points_min) {
             return back()->with('error', 'Ton classement (' . $user->points . ' pts) ne correspond pas à ce tableau.');
         }
 
-        // 3. VÉRIFICATION DU CRÉNEAU (Une seule inscription par SuperTable/Série)
+        // 4. VÉRIFICATION DU CRÉNEAU (Une seule inscription par SuperTable)
         $alreadyInSlot = Registration::where('user_id', $user->id)
             ->whereHas('subTable', function($q) use ($subTable) {
                 $q->where('super_table_id', $subTable->super_table_id);
             })->exists();
 
         if ($alreadyInSlot) {
-            return back()->with('error', 'Tu as déjà un tableau prévu dans la série ' . $subTable->superTable->name . '.');
+            return back()->with('error', 'Tu es déjà inscrit dans la série ' . $superTable->name . ' (créneau identique).');
         }
 
-        // 4. DÉTERMINATION DU STATUT (Gestion de la liste d'attente)
-        // On vérifie si la SuperTable est pleine via ta méthode isFull()
-        $status = $subTable->superTable->isFull() ? 'waiting_list' : 'confirmed';
+        // 5. CAPACITÉ : Vérification du nombre d'inscrits CONFIRMÉS sur le SuperTable
+        $totalConfirmed = Registration::whereHas('subTable', function($q) use ($superTable) {
+                $q->where('super_table_id', $superTable->id);
+            })
+            ->where('status', 'confirmed')
+            ->count();
 
-        // 5. CRÉATION DE L'INSCRIPTION
+        // Détermination du statut (Confirmation ou Liste d'attente)
+        $status = ($totalConfirmed < $superTable->max_players) ? 'confirmed' : 'waiting_list';
+
+        // 6. DÉCOUPAGE DU NOM (Pour l'export LibreOffice)
+        $nameParts = explode(' ', trim($user->name));
+        $firstname = $nameParts[0];
+        $lastname = count($nameParts) > 1 ? implode(' ', array_slice($nameParts, 1)) : '';
+
+        // 7. CRÉATION DE L'INSCRIPTION
         try {
-            $registration = new Registration();
-            
-            // Données d'identification
-            $registration->user_id = $request->user_id ?? Auth::id();
-            $registration->created_by = Auth::id();
-            $registration->sub_table_id = $subTable->id;
+            Registration::create([
+                'user_id' => $user->id,
+                'created_by' => $user->id,
+                'sub_table_id' => $subTable->id,
+                'player_license' => $user->license_number,
+                'player_firstname' => $firstname,
+                'player_lastname' => $lastname,
+                'player_points' => $user->points,
+                'status' => $status,
+                'priority' => 'primary',
+                'registered_at' => now(),
+            ]);
 
-            // Informations du joueur au moment de l'inscription (historisation)
-            $registration->player_license = $user->license_number;
-            $registration->player_firstname = $user->name; // ou sépare si tu as first/last name
-            $registration->player_lastname = $user->last_name ?? ''; 
-            $registration->player_points = $user->points;
-
-            $registration->status = $status;
-            $registration->priority = 'primary';
-
-            $registration->save();
-
-            $message = ($status === 'confirmed') 
-                ? 'Inscription validée pour le ' . $subTable->label . ' !' 
-                : 'Série complète : tu as été placé en liste d\'attente pour le ' . $subTable->label . '.';
-
-            return back()->with('success', $message);
+            if ($status === 'confirmed') {
+                return back()->with('success', 'Inscription validée pour le ' . $subTable->label . ' !');
+            } else {
+                // On renvoie un message spécifique pour la liste d'attente
+                return back()->with('warning', 'Le créneau est complet : tu as été placé en LISTE D\'ATTENTE pour le ' . $subTable->label . '.');
+            }
 
         } catch (\Exception $e) {
             return back()->with('error', 'Une erreur est survenue lors de l\'inscription.');
         }
     }
-
     /**
      * Annule une inscription.
      */
