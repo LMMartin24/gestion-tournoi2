@@ -74,8 +74,8 @@ class DashboardController extends Controller
 
         // 4. VÉRIFICATION DU CRÉNEAU (Une seule inscription par SuperTable)
         $alreadyInSlot = Registration::where('user_id', $user->id)
-            ->whereHas('subTable', function($q) use ($subTable) {
-                $q->where('super_table_id', $subTable->super_table_id);
+            ->whereHas('subTable', function($q) use ($superTable) {
+                $q->where('super_table_id', $superTable->id);
             })->exists();
 
         if ($alreadyInSlot) {
@@ -89,8 +89,9 @@ class DashboardController extends Controller
             ->where('status', 'confirmed')
             ->count();
 
-        // Détermination du statut (Confirmation ou Liste d'attente)
-        $status = ($totalConfirmed < $superTable->max_players) ? 'confirmed' : 'waiting_list';
+        // CORRECTIF : Forçage du type entier et comparaison stricte
+        $limit = (int) $superTable->max_players;
+        $status = ($totalConfirmed < $limit) ? 'confirmed' : 'waiting_list';
 
         // 6. DÉCOUPAGE DU NOM (Pour l'export LibreOffice)
         $nameParts = explode(' ', trim($user->name));
@@ -115,8 +116,8 @@ class DashboardController extends Controller
             if ($status === 'confirmed') {
                 return back()->with('success', 'Inscription validée pour le ' . $subTable->label . ' !');
             } else {
-                // On renvoie un message spécifique pour la liste d'attente
-                return back()->with('warning', 'Le créneau est complet : tu as été placé en LISTE D\'ATTENTE pour le ' . $subTable->label . '.');
+                // Changement en 'error' ou 'warning' pour bien marquer la liste d'attente visuellement
+                return back()->with('error', 'Série complète : tu as été placé en LISTE D\'ATTENTE pour le ' . $subTable->label . '.');
             }
 
         } catch (\Exception $e) {
@@ -124,15 +125,26 @@ class DashboardController extends Controller
         }
     }
     /**
-     * Annule une inscription.
+     * Annule une inscription (Dashboard classique).
      */
     public function unregister(SubTable $subTable)
     {
-        Registration::where('user_id', auth()->id())
+        // 1. On récupère l'instance précise AVEC ses relations
+        $registration = Registration::with('subTable.superTable')
+            ->where('user_id', auth()->id())
             ->where('sub_table_id', $subTable->id)
-            ->delete();
+            ->first();
 
-        return back()->with('success', 'Désinscription effectuée.');
+        // 2. On vérifie si l'inscription existe avant de tenter la suppression
+        if (!$registration) {
+            return back()->with('error', "Inscription introuvable.");
+        }
+
+        // 3. On appelle delete() sur l'objet lui-même. 
+        // C'est cette action précise qui déclenche l'Observer !
+        $registration->delete();
+
+        return back()->with('success', 'Désinscription effectuée. Si quelqu\'un attendait, il a pris ta place !');
     }
 
     /**

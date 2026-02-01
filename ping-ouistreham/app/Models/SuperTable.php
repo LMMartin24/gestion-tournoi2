@@ -43,9 +43,13 @@ class SuperTable extends Model
     /**
      * Vérifie si le bloc est plein
      */
-    public function isFull(): bool
+    public function isFull()
     {
-        return $this->currentPlayersCount() >= $this->max_players;
+        $confirmedCount = \App\Models\Registration::whereHas('subTable', function($q) {
+            $q->where('super_table_id', $this->id);
+        })->where('status', 'confirmed')->count();
+
+        return $confirmedCount >= (int) $this->max_players;
     }
 
     

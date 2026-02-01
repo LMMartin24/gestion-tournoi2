@@ -108,8 +108,8 @@ class CoachController extends Controller
         $coach = auth()->user();
 
         // 1. SÉCURITÉ : Date limite de clôture
-        if (now()->gt($subTable->superTable->tournament->registration_deadline)) {
-            $dateFormatted = \Carbon\Carbon::parse($subTable->superTable->tournament->registration_deadline)->format('d/m/Y H:i');
+        if (now()->gt($superTable->tournament->registration_deadline)) {
+            $dateFormatted = \Carbon\Carbon::parse($superTable->tournament->registration_deadline)->format('d/m/Y H:i');
             return back()->with('error', "Inscriptions impossibles : la date limite était le $dateFormatted.");
         }
 
@@ -119,7 +119,7 @@ class CoachController extends Controller
         }
 
         // 3. VÉRIFICATION : Limite de 2 tableaux par TOURNOI
-        $tournamentId = $subTable->superTable->tournament_id;
+        $tournamentId = $superTable->tournament_id;
         $count = Registration::where('user_id', $player->id)
             ->whereHas('subTable.superTable', function($q) use ($tournamentId) {
                 $q->where('tournament_id', $tournamentId);
@@ -145,14 +145,17 @@ class CoachController extends Controller
         }
 
         // 6. CAPACITÉ : Vérification du nombre d'inscrits CONFIRMÉS sur le SuperTable
+        // On utilise (int) pour s'assurer que PHP compare bien deux nombres
         $currentInscriptionsCount = Registration::whereHas('subTable', function($q) use ($superTable) {
                 $q->where('super_table_id', $superTable->id);
             })
             ->where('status', 'confirmed')
             ->count();
 
-        // On détermine le statut selon la limite du SuperTable
-        $status = ($currentInscriptionsCount < $superTable->max_players) ? 'confirmed' : 'waiting_list';
+        $limit = (int) $superTable->max_players;
+
+        // Détermination du statut : si on a déjà atteint ou dépassé la limite, c'est liste d'attente
+        $status = ($currentInscriptionsCount < $limit) ? 'confirmed' : 'waiting_list';
 
         // 7. PRÉPARATION DES DONNÉES (Nom/Prénom pour l'export)
         $nameParts = explode(' ', trim($player->name));
@@ -175,27 +178,31 @@ class CoachController extends Controller
         if ($status === 'confirmed') {
             return back()->with('success', "{$player->name} est inscrit avec succès !");
         } else {
-            return back()->with('error', "Attention : {$player->name} a été placé en LISTE D'ATTENTE (Tableau complet).");
+            // Changement ici : on renvoie un message 'error' pour que le coach voit bien la liste d'attente
+            return back()->with('error', "ATTENTION : Le tableau est COMPLET. {$player->name} a été placé en LISTE D'ATTENTE.");
         }
     }
     /**
-     * Désinscrit un joueur.
+     * Désinscrit un joueur et déclenche le repêchage automatique.
      */
     public function unregisterPlayer(Request $request)
     {
-        $registration = Registration::where('user_id', $request->player_id)
+        // On récupère l'inscription AVEC ses relations pour l'Observer
+        $registration = Registration::with('subTable.superTable')
+            ->where('user_id', $request->player_id)
             ->where('sub_table_id', $request->sub_table_id)
             ->firstOrFail();
             
-        // Seul le créateur (coach), le joueur lui-même ou le super_admin peut désinscrire
+        // Sécurité : Vérification des droits
         if ($registration->created_by !== auth()->id() && 
             $registration->user_id !== auth()->id() && 
             !auth()->user()->isSuperAdmin()) {
             abort(403, "Action non autorisée.");
         }
 
+        // L'appel à delete() sur l'objet déclenche RegistrationObserver@deleted
         $registration->delete();
 
-        return back()->with('success', "Désinscription effectuée.");
+        return back()->with('success', "Désinscription effectuée. La liste d'attente a été mise à jour.");
     }
 }
