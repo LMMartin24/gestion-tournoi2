@@ -144,8 +144,20 @@ class DashboardController extends Controller
             return back()->with('error', "Inscription introuvable.");
         }
 
+        // --- AJOUT : NOTIFICATION PAR MAIL À L'ADMIN ---
+        try {
+            // On envoie le mail à l'adresse fixe de l'organisation
+            \Illuminate\Support\Facades\Mail::to('tournoi-apo@skopee.fr')
+                ->send(new \App\Mail\UnregistrationNotification($registration));
+        } catch (\Exception $e) {
+            // On log l'erreur si besoin, mais on ne bloque pas l'utilisateur 
+            // pour un problème d'envoi de mail de notification
+            \Illuminate\Support\Facades\Log::error("Erreur mail désinscription : " . $e->getMessage());
+        }
+        // -----------------------------------------------
+
         // 3. On appelle delete() sur l'objet lui-même. 
-        // C'est cette action précise qui déclenche l'Observer !
+        // C'est cette action précise qui déclenche l'Observer pour repêcher le suivant !
         $registration->delete();
 
         return back()->with('success', 'Désinscription effectuée. Si quelqu\'un attendait, il a pris ta place !');
