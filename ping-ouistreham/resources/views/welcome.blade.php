@@ -100,7 +100,7 @@
                         {{-- Badge Date MOBILE --}}
                         <div class="md:hidden bg-indigo-600 text-white p-6 mb-6 rounded-2xl flex justify-between items-center shadow-xl">
                             <div>
-                                <p class="text-[10px] uppercase tracking-[0.2em] font-black opacity-80 mb-1">Prochain Évènement</p>
+                                <p class="text-[10px] uppercase tracking-[0.2em] font-black opacity-80 mb-1">Notre Prochain Évènement</p>
                                 <p class="text-3xl font-[1000] italic leading-none uppercase">
                                     {{ \Carbon\Carbon::parse($nextTournament->date)->translatedFormat('d & d M') }}
                                 </p>
