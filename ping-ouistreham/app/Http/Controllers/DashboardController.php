@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use App\Models\SubTable;
 use App\Models\Registration;
 use Illuminate\Support\Facades\Auth;
+use App\Mail\RegistrationConfirmation;
+use Illuminate\Support\Facades\Mail; 
 
 class DashboardController extends Controller
 {
@@ -46,84 +48,86 @@ class DashboardController extends Controller
      * Gère l'inscription d'un joueur individuel (Dashboard classique).
      */
     public function register(Request $request, SubTable $subTable)
-    {
-        $user = Auth::user();
-        $superTable = $subTable->superTable;
-        $tournament = $superTable->tournament;
+        {
+            $user = Auth::user();
+            $superTable = $subTable->superTable;
+            $tournament = $superTable->tournament;
 
-        // 1. SÉCURITÉ : Date limite de clôture
-        if (now()->gt($tournament->registration_deadline)) {
-            $dateFormatted = \Carbon\Carbon::parse($tournament->registration_deadline)->format('d/m/Y H:i');
-            return back()->with('error', "Trop tard ! Les inscriptions sont fermées depuis le $dateFormatted.");
-        }
-
-        // 2. LIMITE DE 2 TABLEAUX PAR TOURNOI
-        $registrationsInThisTournament = Registration::where('user_id', $user->id)
-            ->whereHas('subTable.superTable', function($q) use ($tournament) {
-                $q->where('tournament_id', $tournament->id);
-            })->count();
-
-        if ($registrationsInThisTournament >= 2) {
-            return back()->with('error', 'Limite atteinte : Tu es déjà inscrit à 2 tableaux pour ce tournoi.');
-        }
-
-        // 3. VÉRIFICATION DES POINTS
-        if ($user->points > $subTable->points_max || $user->points < $subTable->points_min) {
-            return back()->with('error', 'Ton classement (' . $user->points . ' pts) ne correspond pas à ce tableau.');
-        }
-
-        // 4. VÉRIFICATION DU CRÉNEAU (Une seule inscription par SuperTable)
-        $alreadyInSlot = Registration::where('user_id', $user->id)
-            ->whereHas('subTable', function($q) use ($superTable) {
-                $q->where('super_table_id', $superTable->id);
-            })->exists();
-
-        if ($alreadyInSlot) {
-            return back()->with('error', 'Tu es déjà inscrit dans la série ' . $superTable->name . ' (créneau identique).');
-        }
-
-        // 5. CAPACITÉ : Vérification du nombre d'inscrits CONFIRMÉS sur le SuperTable
-        $totalConfirmed = Registration::whereHas('subTable', function($q) use ($superTable) {
-                $q->where('super_table_id', $superTable->id);
-            })
-            ->where('status', 'confirmed')
-            ->count();
-
-        // CORRECTIF : Forçage du type entier et comparaison stricte
-        $limit = (int) $superTable->max_players;
-        $status = ($totalConfirmed < $limit) ? 'confirmed' : 'waiting_list';
-
-        // 6. DÉCOUPAGE DU NOM (Pour l'export LibreOffice)
-        $nameParts = explode(' ', trim($user->name));
-        $firstname = $nameParts[0];
-        $lastname = count($nameParts) > 1 ? implode(' ', array_slice($nameParts, 1)) : '';
-
-        // 7. CRÉATION DE L'INSCRIPTION
-        try {
-            Registration::create([
-                'user_id' => $user->id,
-                'created_by' => $user->id,
-                'sub_table_id' => $subTable->id,
-                'player_license' => $user->license_number,
-                'player_firstname' => $firstname,
-                'player_lastname' => $lastname,
-                'player_points' => $user->points,
-                'status' => $status,
-                'priority' => 'primary',
-                'registered_at' => now(),
-            ]);
-
-            if ($status === 'confirmed') {
-                return back()->with('success', 'Inscription validée pour le ' . $subTable->label . ' !');
-            } else {
-                // Changement en 'error' ou 'warning' pour bien marquer la liste d'attente visuellement
-                return back()->with('error', 'Série complète : tu as été placé en LISTE D\'ATTENTE pour le ' . $subTable->label . '.');
+            // 1. SÉCURITÉ : Date limite de clôture
+            if (now()->gt($tournament->registration_deadline)) {
+                $dateFormatted = Carbon::parse($tournament->registration_deadline)->format('d/m/Y H:i');
+                return back()->with('error', "Trop tard ! Les inscriptions sont fermées depuis le $dateFormatted.");
             }
 
-        } catch (\Exception $e) {
-            return back()->with('error', 'Une erreur est survenue lors de l\'inscription.');
+            // 2. LIMITE DE 2 TABLEAUX PAR TOURNOI
+            $registrationsInThisTournament = Registration::where('user_id', $user->id)
+                ->whereHas('subTable.superTable', function($q) use ($tournament) {
+                    $q->where('tournament_id', $tournament->id);
+                })->count();
+
+            if ($registrationsInThisTournament >= 2) {
+                return back()->with('error', 'Limite atteinte : Tu es déjà inscrit à 2 tableaux pour ce tournoi.');
+            }
+
+            // 3. VÉRIFICATION DES POINTS
+            if ($user->points > $subTable->points_max || $user->points < $subTable->points_min) {
+                return back()->with('error', 'Ton classement (' . $user->points . ' pts) ne correspond pas à ce tableau.');
+            }
+
+            // 4. VÉRIFICATION DU CRÉNEAU (Une seule inscription par SuperTable)
+            $alreadyInSlot = Registration::where('user_id', $user->id)
+                ->whereHas('subTable', function($q) use ($superTable) {
+                    $q->where('super_table_id', $superTable->id);
+                })->exists();
+
+            if ($alreadyInSlot) {
+                return back()->with('error', 'Tu es déjà inscrit dans la série ' . $superTable->name . ' (créneau identique).');
+            }
+
+            // 5. CAPACITÉ : Vérification du nombre d'inscrits CONFIRMÉS sur le SuperTable
+            $totalConfirmed = Registration::whereHas('subTable', function($q) use ($superTable) {
+                    $q->where('super_table_id', $superTable->id);
+                })
+                ->where('status', 'confirmed')
+                ->count();
+
+            $limit = (int) $superTable->max_players;
+            $status = ($totalConfirmed < $limit) ? 'confirmed' : 'waiting_list';
+
+            // 6. DÉCOUPAGE DU NOM (Pour l'export)
+            $nameParts = explode(' ', trim($user->name));
+            $firstname = $nameParts[0];
+            $lastname = count($nameParts) > 1 ? implode(' ', array_slice($nameParts, 1)) : '';
+
+            // 7. CRÉATION DE L'INSCRIPTION
+            try {
+                $registration = Registration::create([
+                    'user_id'          => $user->id,
+                    'created_by'       => $user->id,
+                    'sub_table_id'     => $subTable->id,
+                    'player_license'   => $user->license_number,
+                    'player_firstname' => $firstname,
+                    'player_lastname'  => $lastname,
+                    'player_points'    => $user->points,
+                    'status'           => $status,
+                    'priority'         => 'primary',
+                    'registered_at'    => now(),
+                ]);
+
+                // 8. ENVOI DU MAIL DE CONFIRMATION
+                // On l'envoie systématiquement (ou tu peux mettre un if($status == 'confirmed'))
+                Mail::to($user->email)->send(new RegistrationConfirmation($registration));
+
+                if ($status === 'confirmed') {
+                    return back()->with('success', 'Inscription validée pour le ' . $subTable->label . ' ! Un mail de confirmation vous a été envoyé.');
+                } else {
+                    return back()->with('error', 'Série complète : tu as été placé en LISTE D\'ATTENTE pour le ' . $subTable->label . '. (Mail de confirmation envoyé)');
+                }
+
+            } catch (\Exception $e) {
+                return back()->with('error', 'Une erreur est survenue lors de l\'inscription : ' . $e->getMessage());
+            }
         }
-    }
     /**
      * Annule une inscription (Dashboard classique).
      */
