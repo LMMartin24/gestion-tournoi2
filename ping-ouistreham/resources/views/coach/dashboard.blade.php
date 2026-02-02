@@ -162,17 +162,28 @@
                 <form action="{{ route('coach.add_student') }}" method="POST" class="space-y-6">
                     @csrf
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {{-- Nom complet --}}
                         <div>
                             <label class="text-[10px] uppercase font-black text-gray-400 tracking-widest ml-1 mb-2 block">Nom complet</label>
                             <input type="text" name="name" required placeholder="EX: JEAN DUPONT" class="w-full bg-black border border-white/10 rounded-2xl px-6 py-4 text-white text-sm focus:border-indigo-500 transition-all outline-none">
                         </div>
+
+                        {{-- N° Licence --}}
                         <div>
                             <label class="text-[10px] uppercase font-black text-gray-400 tracking-widest ml-1 mb-2 block">N° Licence</label>
                             <input type="text" name="license_number" required placeholder="EX: 1422334" class="w-full bg-black border border-white/10 rounded-2xl px-6 py-4 text-white text-sm focus:border-indigo-500 transition-all outline-none">
                         </div>
-                        <div class="md:col-span-2">
+
+                        {{-- Points FFTT --}}
+                        <div>
                             <label class="text-[10px] uppercase font-black text-gray-400 tracking-widest ml-1 mb-2 block">Points FFTT</label>
                             <input type="number" name="points" required placeholder="500" class="w-full bg-black border border-white/10 rounded-2xl px-6 py-4 text-white text-sm focus:border-indigo-500 transition-all outline-none">
+                        </div>
+
+                        {{-- AJOUT DU CHAMP CLUB --}}
+                        <div>
+                            <label class="text-[10px] uppercase font-black text-gray-400 tracking-widest ml-1 mb-2 block">Club</label>
+                            <input type="text" name="club" placeholder="EX: TT OUISTREHAM" class="w-full bg-black border border-white/10 rounded-2xl px-6 py-4 text-white text-sm focus:border-indigo-500 transition-all outline-none">
                         </div>
                     </div>
 
