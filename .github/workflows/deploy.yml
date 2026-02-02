@@ -1,4 +1,4 @@
-name: Deploy Website
+name: Deploy Tournoi APO
 
 on:
   push:
@@ -17,54 +17,51 @@ jobs:
         with:
           node-version: '20'
 
+      # 1. Compilation des assets sur GitHub (car npm ne marche pas en SSH chez toi)
       - name: Install NPM & Build
         run: |
           cd ping-ouistreham
           npm install
           npm run build
 
-      - name: Upload Build Assets
+      # 2. Transfert du dossier 'build' généré vers le bon dossier sur Hostinger
+      - name: Upload Build Assets (Vite)
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
-          port: 65002
-          # Transfert du build compilé vers le serveur
+          port: ${{ secrets.SSH_PORT }}
           source: "ping-ouistreham/public/build/"
-          target: "domains/tournoi-de-oustreham.skopee.fr/public_html/ping-ouistreham/public/"
-          strip_components: 2
+          target: "domains/tournoi-apo.skopee.fr/public_html/ping-ouistreham/public/"
+          strip_components: 2 # Enlève 'ping-ouistreham/public' pour ne garder que 'build'
 
+      # 3. Exécution des commandes Laravel sur le serveur
       - name: Execute SSH Commands
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
-          port: 65002
+          port: ${{ secrets.SSH_PORT }}
           script: |
-            # 1. Aller à la racine du domaine correct
-            cd domains/tournoi-de-oustreham.skopee.fr/public_html
+            # On entre dans le dossier du projet
+            cd domains/tournoi-apo.skopee.fr/public_html/ping-ouistreham
             
-            # 2. Mise à jour du code via Git
-            # On force le reset pour éviter les erreurs de fichiers modifiés sur le serveur
+            # Mise à jour du code source
             git fetch origin main
             git reset --hard origin/main
             
-            # 3. Entrer dans le dossier de l'application
-            cd ping-ouistreham
-
-            # 4. Installation des dépendances PHP (Composer)
-            composer install --no-dev --optimize-autoloader
-
-            # 5. Maintenance et Caches
-            # --force est obligatoire pour les migrations en production
+            # Installation des dépendances PHP
+            composer install --no-dev --optimize-autoloader --no-interaction
+            
+            # Migration de la base de données
             php artisan migrate --force
             
-            # Nettoyage et optimisation des caches Laravel
+            # Nettoyage et optimisation des caches
             php artisan config:cache
             php artisan route:cache
             php artisan view:cache
-
-            # 6. Correction des permissions pour le stockage et les logs
+            
+            # Correction des permissions sur les dossiers d'écriture
             chmod -R 775 storage bootstrap/cache
