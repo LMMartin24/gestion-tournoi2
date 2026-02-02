@@ -43,7 +43,7 @@
             {{-- Boutons d'action --}}
             <div class="mt-10 md:mt-12 flex flex-col sm:flex-row gap-4 md:gap-6">
                 @if($nextTournament)
-                    <a href="{{ route('tournaments.public.show', $nextTournament->slug) }}" class="text-center bg-white text-black font-[900] py-5 md:py-6 px-10 md:px-12 rounded-full uppercase tracking-[0.2em] text-xs md:text-sm hover:bg-indigo-500 hover:text-white transition-all shadow-2xl transform hover:scale-105">
+                    <a href="/dashboard" class="text-center bg-white text-black font-[900] py-5 md:py-6 px-10 md:px-12 rounded-full uppercase tracking-[0.2em] text-xs md:text-sm hover:bg-indigo-500 hover:text-white transition-all shadow-2xl transform hover:scale-105">
                         Consulter les tableaux
                     </a>
                 @endif
