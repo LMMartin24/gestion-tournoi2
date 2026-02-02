@@ -17,14 +17,15 @@ jobs:
         with:
           node-version: '20'
 
-      # 1. Compilation des assets sur GitHub (car npm ne marche pas en SSH chez toi)
+      # 1. Compilation des assets sur GitHub
       - name: Install NPM & Build
         run: |
           cd ping-ouistreham
           npm install
           npm run build
 
-      # 2. Transfert du dossier 'build' généré vers le bon dossier sur Hostinger
+      # 2. Transfert du dossier 'build' généré vers Hostinger
+      # Correction du strip_components pour éviter les erreurs de dossier
       - name: Upload Build Assets (Vite)
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -33,8 +34,8 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT }}
           source: "ping-ouistreham/public/build/"
-          target: "domains/tournoi-apo.skopee.fr/public_html/ping-ouistreham/public/"
-          strip_components: 2 # Enlève 'ping-ouistreham/public' pour ne garder que 'build'
+          target: "domains/tournoi-apo.skopee.fr/public_html/ping-ouistreham/"
+          strip_components: 1
 
       # 3. Exécution des commandes Laravel sur le serveur
       - name: Execute SSH Commands
@@ -44,24 +45,27 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT }}
+          command_timeout: 15m # Augmenté à 15 min car ton serveur a un Load Average élevé
           script: |
-            # On entre dans le dossier du projet
             cd domains/tournoi-apo.skopee.fr/public_html/ping-ouistreham
             
-            # Mise à jour du code source
+            # Forcer la synchronisation du code
             git fetch origin main
             git reset --hard origin/main
             
-            # Installation des dépendances PHP
+            # Installation propre des dépendances PHP
+            # On ajoute le timeout et la limite mémoire pour éviter les blocages
+            export COMPOSER_MEMORY_LIMIT=-1
             composer install --no-dev --optimize-autoloader --no-interaction
             
-            # Migration de la base de données
+            # Migration de la base de données (sans erreur puisque tu as supprimé la migration club)
             php artisan migrate --force
             
-            # Nettoyage et optimisation des caches
+            # Nettoyage profond et reconstruction du cache
+            php artisan optimize:clear
             php artisan config:cache
             php artisan route:cache
             php artisan view:cache
             
-            # Correction des permissions sur les dossiers d'écriture
+            # Correction des permissions
             chmod -R 775 storage bootstrap/cache
