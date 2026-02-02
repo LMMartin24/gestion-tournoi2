@@ -82,13 +82,6 @@ class CoachController extends Controller
             'club' => auth()->user()->club,            // On lui donne le même club que le coach
         ]);
 
-        // 5. Envoi de l'email de bienvenue (Optionnel, nécessite config .env)
-        try {
-            Mail::to($student->email)->send(new WelcomeStudentMail($student, $randomPassword));
-        } catch (\Exception $e) {
-            // On continue même si l'email ne part pas (utile en local sans config mail)
-        }
-
         return back()->with('success', "L'élève {$student->name} a été ajouté. Email : {$student->email}");
     }
 
