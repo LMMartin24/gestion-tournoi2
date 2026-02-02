@@ -27,7 +27,7 @@
                         <x-input-label for="role" :value="__('Vous êtes ?')" class="text-white mb-2 uppercase text-xs tracking-widest" />
                         <select id="role" name="role" class="block w-full bg-black/50 border-white/10 text-white focus:border-indigo-500 focus:ring-indigo-500 rounded-xl shadow-sm py-3 transition-all">
                             <option value="player">{{ __('Joueur (Individuel)') }}</option>
-                            <option value="coach">{{ __('Entraîneur (Groupé)') }}</option>
+                            <option value="coach">{{ __('Inscription Groupée') }}</option>
                         </select>
                     </div>
                     <div id="license_container">
@@ -108,8 +108,8 @@
     // Gestion de l'affichage selon le rôle
     roleSelect.addEventListener('change', function() {
         if (this.value === 'coach') {
-            licenseCont.style.opacity = '0.3';
-            pointsCont.style.opacity = '0.3';
+            licenseCont.style.opacity = '0.7';
+            pointsCont.style.opacity = '0.7';
             licenseInput.required = false;
             pointsInput.required = false;
         } else {
