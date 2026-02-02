@@ -114,14 +114,14 @@ class DashboardController extends Controller
                     'registered_at'    => now(),
                 ]);
 
-                // 8. ENVOI DU MAIL DE CONFIRMATION
-                // On l'envoie systématiquement (ou tu peux mettre un if($status == 'confirmed'))
-                Mail::to($user->email)->send(new RegistrationConfirmation($registration));
+                // 8. ENVOI DU MAIL À L'ADMINISTRATION
+                // On remplace $user->email par l'adresse fixe
+                Mail::to('tournoi-apo@skopee.fr')->send(new RegistrationConfirmation($registration));
 
                 if ($status === 'confirmed') {
-                    return back()->with('success', 'Inscription validée pour le ' . $subTable->label . ' ! Un mail de confirmation vous a été envoyé.');
+                    return back()->with('success', 'Inscription validée pour le ' . $subTable->label . ' ! (Notification envoyée à l\'admin)');
                 } else {
-                    return back()->with('error', 'Série complète : tu as été placé en LISTE D\'ATTENTE pour le ' . $subTable->label . '. (Mail de confirmation envoyé)');
+                    return back()->with('error', 'Série complète : tu as été placé en LISTE D\'ATTENTE pour le ' . $subTable->label . '. (Notification envoyée à l\'admin)');
                 }
 
             } catch (\Exception $e) {
