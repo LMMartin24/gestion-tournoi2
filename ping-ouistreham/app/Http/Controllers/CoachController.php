@@ -169,7 +169,7 @@ class CoachController extends Controller
             ]);
 
             // 9. ENVOI DU MAIL À L'ADMIN (Systématique)
-            Mail::to('tournoi-apo@skopee.fr')->send(new RegistrationConfirmation($registration));
+            Mail::to('tournoi-apo@skopee.fr')->send(new RegistrationConfirmationCoach($registration));
 
             if ($status === 'confirmed') {
                 return back()->with('success', "{$player->name} est inscrit ! Un mail de confirmation a été envoyé à l'admin.");
@@ -201,7 +201,7 @@ class CoachController extends Controller
 
         // ENVOI DU MAIL AVANT SUPPRESSION
         try {
-            Mail::to('tournoi-apo@skopee.fr')->send(new UnregistrationNotification($registration));
+            Mail::to('tournoi-apo@skopee.fr')->send(new UnregistrationNotificationCoach($registration));
         } catch (\Exception $e) {
             Log::error("Erreur mail désinscription coach : " . $e->getMessage());
         }
