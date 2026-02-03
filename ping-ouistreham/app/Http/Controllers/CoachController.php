@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
+use App\Mail\RegistrationConfirmationCoach;
+use App\Mail\UnregistrationNotificationCoach;
 
 // Import des Mailables
 use App\Mail\RegistrationConfirmation;
