@@ -1,5 +1,23 @@
-<header x-data="{ open: false }" class=" top-0 left-0 w-full z-50 bg-[#1a1a1a]">
-    <div class="max-w-[3200px] mx-auto px-8 lg:px-16 py-10 flex justify-between items-center">
+<header x-data="{ open: false }" class="top-0 left-0 w-full z-50 bg-[#1a1a1a]">
+    {{-- BARRE DE CONTACT SUPÉRIEURE --}}
+    <div class="w-full bg-[#111] border-b border-white/5 py-2">
+        <div class="max-w-[3200px] mx-auto px-8 lg:px-16 flex flex-wrap justify-center md:justify-end gap-6 text-[10px] md:text-xs font-bold uppercase tracking-widest text-gray-400">
+            <a href="mailto:tennisdetableouistreham@gmail.com" class="flex items-center gap-2 hover:text-indigo-400 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                tennisdetableouistreham@gmail.com
+            </a>
+            <a href="tel:0759522323" class="flex items-center gap-2 hover:text-indigo-400 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                </svg>
+                07 59 52 23 23
+            </a>
+        </div>
+    </div>
+
+    <div class="max-w-[3200px] mx-auto px-8 lg:px-16 py-8 flex justify-between items-center">
         
         {{-- LOGO --}}
         <a href="/" class="text-white font-[1000] tracking-tighter text-3xl md:text-4xl flex items-center gap-4 uppercase italic">
@@ -39,43 +57,42 @@
         </nav>
 
         {{-- MENU ADMINISTRATION --}}
-@if(auth()->check() && (auth()->user()->role === 'admin' || auth()->user()->role === 'super_admin'))
-    <div class="relative group">
-        <button class="flex items-center gap-2 px-4 py-2 text-xs font-black uppercase tracking-widest text-indigo-400 border border-indigo-500/20 rounded-xl bg-indigo-500/5 hover:bg-indigo-500 hover:text-white transition-all">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            Admin
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7" />
-            </svg>
-        </button>
+        @if(auth()->check() && (auth()->user()->role === 'admin' || auth()->user()->role === 'super_admin'))
+            <div class="relative group hidden xl:block">
+                <button class="flex items-center gap-2 px-4 py-2 text-xs font-black uppercase tracking-widest text-indigo-400 border border-indigo-500/20 rounded-xl bg-indigo-500/5 hover:bg-indigo-500 hover:text-white transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Admin
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
 
-        {{-- Dropdown au survol --}}
-        <div class="absolute left-0 mt-2 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-            <div class="bg-[#111] border border-white/10 rounded-2xl shadow-2xl p-2 backdrop-blur-xl">
-                <a href="{{ route('admin.tournaments.index') }}" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-colors text-[10px] font-black uppercase tracking-widest text-gray-300 hover:text-indigo-400">
-                    <span class="w-1.5 h-1.5 bg-indigo-500 rounded-full"></span>
-                    Gérer les Tournois
-                </a>
-                <a href="{{ route('admin.tournaments.create') }}" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-colors text-[10px] font-black uppercase tracking-widest text-gray-300 hover:text-green-500">
-                    <span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-                    Nouveau Tournoi
-                </a>
-                <div class="h-px bg-white/5 my-2"></div>
-                <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-colors text-[10px] font-black uppercase tracking-widest text-gray-500 italic">
-                    <span class="w-1.5 h-1.5 bg-gray-700 rounded-full"></span>
-                    Utilisateurs (Bientôt)
-                </a>
+                <div class="absolute right-0 mt-2 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                    <div class="bg-[#111] border border-white/10 rounded-2xl shadow-2xl p-2 backdrop-blur-xl">
+                        <a href="{{ route('admin.tournaments.index') }}" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-colors text-[10px] font-black uppercase tracking-widest text-gray-300 hover:text-indigo-400">
+                            <span class="w-1.5 h-1.5 bg-indigo-500 rounded-full"></span>
+                            Gérer les Tournois
+                        </a>
+                        <a href="{{ route('admin.tournaments.create') }}" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-colors text-[10px] font-black uppercase tracking-widest text-gray-300 hover:text-green-500">
+                            <span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                            Nouveau Tournoi
+                        </a>
+                        <div class="h-px bg-white/5 my-2"></div>
+                        <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-colors text-[10px] font-black uppercase tracking-widest text-gray-500 italic">
+                            <span class="w-1.5 h-1.5 bg-gray-700 rounded-full"></span>
+                            Utilisateurs (Bientôt)
+                        </a>
+                    </div>
+                </div>
             </div>
-        </div>
-    </div>
-@endif
+        @endif
 
         {{-- MOBILE BURGER BUTTON --}}
         <div class="xl:hidden">
-            <button @click="open = !open" class="text-white  relative z-[100]">
+            <button @click="open = !open" class="text-white relative z-[100]">
                 <svg x-show="!open" class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
                 <svg x-show="open" x-cloak class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
@@ -110,6 +127,12 @@
                     <a href="{{ route('login') }}" @click="open = false" class="text-3xl font-black uppercase text-white">Connexion</a>
                     <a href="{{ route('register') }}" @click="open = false" class="text-3xl font-black uppercase italic bg-indigo-600 text-white px-12 py-6 rounded-full">Inscription</a>
                 @endauth
+
+                {{-- CONTACT MOBILE --}}
+                <div class="mt-8 pt-8 border-t border-white/10 flex flex-col gap-4">
+                    <a href="mailto:tennisdetableouistreham@gmail.com" class="text-gray-400 font-bold uppercase tracking-widest text-sm">tennisdetableouistreham@gmail.com</a>
+                    <a href="tel:0759522323" class="text-indigo-400 font-bold uppercase tracking-widest text-xl">07 59 52 23 23</a>
+                </div>
             </nav>
         </div>
     </div>
