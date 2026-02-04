@@ -1,14 +1,10 @@
 <h2>Nouvelle inscription enregistrée</h2>
-
-<p>Une inscription vient d'être effectuée :</p>
-
+<p>Un coach vient d'inscrire un joueur :</p>
 <ul>
+    <li><strong>Coach :</strong> {{ $coach->name ?? 'Non précisé' }}</li>
     <li><strong>Joueur :</strong> {{ $registration->player_firstname }} {{ $registration->player_lastname }}</li>
-    <li><strong>Club :</strong> {{ $registration->user->club ?? 'Non renseigné' }}</li>
-    <li><strong>Tableau :</strong> {{ $registration->subTable->name }}</li>
-    <li><strong>Tournoi :</strong> {{ $registration->subTable->superTable->tournament->name }}</li>
-    <li><strong>Statut :</strong> {{ $registration->status == 'confirmed' ? 'Confirmé' : 'Liste d\'attente' }}</li>
-    <li><strong>Inscrit par :</strong> {{ $coach->name ?? 'Le coach' }}</li>
+    <li><strong>Tableau :</strong> {{ $registration->subTable->name ?? 'N/A' }}</li>
+    <li><strong>Tournoi :</strong> {{ $registration->subTable->superTable->tournament->name ?? 'N/A' }}</li>
+    <li><strong>Points :</strong> {{ $registration->player_points }}</li>
 </ul>
-
-<p>Date : {{ $registration->registered_at->format('d/m/Y H:i') }}</p>
+<p>Date : {{ $registration->registered_at }}</p>

@@ -22,7 +22,7 @@ class RegistrationConfirmationCoach extends Mailable
 
     public function build()
     {
-        return $this->subject('Nouvelle Inscription : ' . $this->registration->player_firstname . ' ' . $this->registration->player_lastname)
-                    ->view('emails.registration_confirmation_coach');
+        return $this->subject('Nouvelle Inscription : ' . $this->registration->player_firstname)
+                    ->view('emails.registration_confirmation');
     }
 }
