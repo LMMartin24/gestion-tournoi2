@@ -104,49 +104,42 @@ class CoachController extends Controller
             'sub_table_id' => 'required|exists:sub_tables,id',
         ]);
 
-        // 1. Chargement des données et relations
         $subTable = SubTable::with(['superTable.tournament'])->findOrFail($request->sub_table_id);
         $superTable = $subTable->superTable;
         $player = User::findOrFail($request->player_id);
         $coach = auth()->user();
 
-        // 2. SÉCURITÉ : Droits du coach
         if ($player->coach_id !== $coach->id && $player->id !== $coach->id) {
-            return back()->with('error', "Action non autorisée pour ce joueur.");
+            return back()->with('error', "Action non autorisée.");
         }
 
-        // 3. VÉRIFICATION DE LA CAPACITÉ (SUPER TABLE)
-        // On compte toutes les inscriptions confirmées pour cette série
+        // 1. Calcul du statut : confirmé ou attente ?
         $currentInscriptionsCount = Registration::whereHas('subTable', function($q) use ($superTable) {
-            $q->where('super_table_id', $superTable->id);
-        })
-        ->where('status', 'confirmed')
-        ->count();
+                $q->where('super_table_id', $superTable->id);
+            })
+            ->where('status', 'confirmed')
+            ->count();
 
         $limit = (int) $superTable->max_players;
+        
+        // Si complet, on passe en 'waiting', sinon 'confirmed'
+        $status = ($currentInscriptionsCount >= $limit) ? 'waiting' : 'confirmed';
 
-        // Bloquer si la limite est atteinte
-        if ($currentInscriptionsCount >= $limit) {
-            return back()->with('error', "Impossible d'inscrire {$player->name} : Le tableau {$superTable->name} est complet ({$limit}/{$limit}).");
-        }
-
-        // 4. VÉRIFICATION DES POINTS
+        // 2. Vérification des points (on garde la sécurité des points même en attente)
         if ($player->points > $subTable->points_max || $player->points < $subTable->points_min) {
-            return back()->with('error', "Le classement ({$player->points} pts) ne permet pas l'accès à ce tableau.");
+            return back()->with('error', "Le classement ({$player->points} pts) ne permet pas l'accès.");
         }
 
-        // 5. PRÉPARATION DU NOM
         $nameParts = explode(' ', trim($player->name));
         $firstname = $nameParts[0];
         $lastname = count($nameParts) > 1 ? implode(' ', array_slice($nameParts, 1)) : '';
 
-        // 6. CRÉATION ET ENVOI MAIL
         try {
             $registration = Registration::create([
                 'user_id' => $player->id,
                 'sub_table_id' => $subTable->id,
                 'created_by' => $coach->id,
-                'status' => 'confirmed', 
+                'status' => $status, 
                 'player_license' => $player->license_number,
                 'player_points' => $player->points,
                 'player_firstname' => $firstname,
@@ -154,14 +147,17 @@ class CoachController extends Controller
                 'registered_at' => now(),
             ]);
 
-            // Envoi du mail avec l'objet registration ET l'objet coach (pour le nom dans le mail)
             Mail::to('tournoi-apo@skopee.fr')->send(new RegistrationConfirmationCoach($registration, $coach));
 
-            return back()->with('success', "{$player->name} est inscrit avec succès !");
+            $msg = ($status === 'waiting') 
+                ? "Tableau complet : {$player->name} a été placé en LISTE D'ATTENTE." 
+                : "{$player->name} est inscrit avec succès !";
+
+            return back()->with('success', $msg);
 
         } catch (\Exception $e) {
-            Log::error("Erreur inscription coach : " . $e->getMessage());
-            return back()->with('error', "Erreur technique lors de l'inscription.");
+            Log::error("Erreur inscription : " . $e->getMessage());
+            return back()->with('error', "Erreur technique.");
         }
     }
     /**
