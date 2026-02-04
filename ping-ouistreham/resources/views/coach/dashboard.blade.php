@@ -20,21 +20,6 @@
             </div>
         @endif
 
-        <div class="mb-16 flex flex-col md:flex-row justify-between items-end gap-6">
-            <div>
-                <h2 class="text-5xl font-black uppercase italic tracking-tighter text-white">
-                    MANAGEMENT <span class="text-indigo-500">D'ÉQUIPE</span>
-                </h2>
-                <p class="text-gray-500 text-xs mt-2 uppercase tracking-widest font-bold">
-                    // {{ auth()->user()->club ?? 'SANS CLUB' }} — {{ auth()->user()->students->count() }} ÉLÈVES
-                </p>
-            </div>
-            
-            <a href="#add-student" class="bg-white/5 border border-white/10 text-white px-8 py-4 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all">
-                + Ajouter un nouvel élève
-            </a>
-        </div>
-
         {{-- SECTION 1 : INSCRIRE L'ÉQUIPE AUX TABLEAUX --}}
         <div class="mb-20">
             <h3 class="text-2xl font-black uppercase italic mb-8 text-white flex items-center gap-3">
@@ -44,11 +29,26 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 @forelse($availableSubTables as $table)
-                    <div class="bg-[#0f0f0f] border border-white/5 p-8 rounded-[2.5rem] shadow-2xl flex flex-col group hover:border-indigo-500/30 transition-all">
+                    @php
+                        $max = (int) $table->superTable->max_players;
+                        $current = $table->superTable->registrations->where('status', 'confirmed')->count();
+                        $percentage = $max > 0 ? round(($current / $max) * 100) : 0;
+                        $isFull = $current >= $max;
+                    @endphp
+
+                    <div class="bg-[#0f0f0f] border {{ $isFull ? 'border-red-500/40' : 'border-white/5' }} p-8 rounded-[2.5rem] shadow-2xl flex flex-col group hover:border-indigo-500/30 transition-all relative overflow-hidden">
                         
-                        <div class="flex justify-between items-start mb-6">
+                        @if($isFull)
+                            <div class="absolute top-4 right-[-35px] bg-red-600 text-white text-[8px] font-black py-1 px-10 transform rotate-45 uppercase tracking-tighter shadow-xl">
+                                Complet
+                            </div>
+                        @endif
+
+                        <div class="flex justify-between items-start mb-4">
                             <div>
-                                <h3 class="text-2xl font-black uppercase italic text-white group-hover:text-indigo-400 transition-colors">{{ $table->label }}</h3>
+                                <h3 class="text-2xl font-black uppercase italic {{ $isFull ? 'text-gray-500' : 'text-white' }} group-hover:text-indigo-400 transition-colors">
+                                    {{ $table->label }}
+                                </h3>
                                 <p class="text-[10px] text-gray-500 font-bold mt-1 uppercase italic tracking-widest">
                                     {{ \Carbon\Carbon::parse($table->superTable->start_time)->format('H:i') }} — {{ $table->entry_fee }}€
                                 </p>
@@ -58,7 +58,21 @@
                             </span>
                         </div>
 
-                        {{-- Liste des joueurs déjà inscrits dans ce tableau --}}
+                        <div class="mb-6">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-[9px] font-black uppercase tracking-widest {{ $isFull ? 'text-red-500' : 'text-gray-500' }}">
+                                    @if($isFull) TABLEAU COMPLET @else REMPLISSAGE @endif
+                                </span>
+                                <span class="text-[10px] font-black {{ $isFull ? 'text-red-500' : 'text-white' }}">
+                                    {{ $current }} / {{ $max }} ({{ $percentage }}%)
+                                </span>
+                            </div>
+                            <div class="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                <div class="h-full transition-all duration-1000 {{ $isFull ? 'bg-red-600' : 'bg-indigo-600' }}" 
+                                     style="width: {{ $percentage }}%"></div>
+                            </div>
+                        </div>
+
                         <div class="flex flex-wrap gap-2 mb-8 min-h-[32px]">
                             @php
                                 $teamIds = auth()->user()->students->pluck('id')->push(auth()->id());
@@ -82,24 +96,32 @@
                             @csrf
                             <input type="hidden" name="sub_table_id" value="{{ $table->id }}">
                             <div class="space-y-4">
-                                <select name="player_id" required class="w-full bg-black border border-white/10 rounded-2xl px-5 py-4 text-white text-[10px] font-black uppercase tracking-widest focus:border-indigo-500 outline-none transition-all">
+                                <select name="player_id" required {{ $isFull ? 'disabled' : '' }} 
+                                        class="w-full bg-black border border-white/10 rounded-2xl px-5 py-4 text-white text-[10px] font-black uppercase tracking-widest focus:border-indigo-500 outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                                     <option value="" disabled selected>Choisir un joueur...</option>
                                     @if(auth()->user()->points <= $table->points_max)
                                         <option value="{{ auth()->id() }}">Moi-même (Coach) - {{ auth()->user()->points }} pts</option>
                                     @endif
                                     @foreach(auth()->user()->students as $student)
                                         @php 
-                                            $isFull = $student->registrations->where('subTable.superTable.tournament_id', $table->superTable->tournament_id)->count() >= 2;
+                                            $hasTwoTables = $student->registrations->where('subTable.superTable.tournament_id', $table->superTable->tournament_id)->count() >= 2;
                                             $tooManyPoints = $student->points > $table->points_max;
                                         @endphp
-                                        <option value="{{ $student->id }}" {{ ($isFull || $tooManyPoints) ? 'disabled' : '' }}>
-                                            {{ $student->name }} ({{ $student->points }} pts) {{ $isFull ? '[MAX 2]' : ($tooManyPoints ? '[PTS TROP HAUTS]' : '') }}
+                                        <option value="{{ $student->id }}" {{ ($hasTwoTables || $tooManyPoints) ? 'disabled' : '' }}>
+                                            {{ $student->name }} ({{ $student->points }} pts) {{ $hasTwoTables ? '[MAX 2]' : ($tooManyPoints ? '[PTS TROP HAUTS]' : '') }}
                                         </option>
                                     @endforeach
                                 </select>
-                                <button type="submit" class="w-full bg-indigo-600 hover:bg-white hover:text-black text-white font-black uppercase text-[10px] tracking-[0.3em] py-5 rounded-2xl transition-all shadow-lg shadow-indigo-500/10">
-                                    Valider l'inscription
-                                </button>
+
+                                @if($isFull)
+                                    <div class="w-full bg-red-500/10 border border-red-500/20 text-red-500 font-black uppercase text-[10px] tracking-widest py-5 rounded-2xl text-center">
+                                        Inscriptions Fermées
+                                    </div>
+                                @else
+                                    <button type="submit" class="w-full bg-indigo-600 hover:bg-white hover:text-black text-white font-black uppercase text-[10px] tracking-[0.3em] py-5 rounded-2xl transition-all shadow-lg shadow-indigo-500/10">
+                                        Valider l'inscription
+                                    </button>
+                                @endif
                             </div>
                         </form>
                     </div>
@@ -137,7 +159,9 @@
                                         {{ $student->password_plain ?? '********' }}
                                     </span>
                                 </td>
-                                <td class="px-8 py-6 text-right text-white font-black tracking-tighter">{{ $student->points }} <span class="text-gray-600 text-[10px]">PTS</span></td>
+                                <td class="px-8 py-6 text-right text-white font-black tracking-tighter">
+                                    {{ $student->points }} <span class="text-gray-600 text-[10px]">PTS</span>
+                                </td>
                             </tr>
                         @empty
                             <tr>
@@ -162,31 +186,23 @@
                 <form action="{{ route('coach.add_student') }}" method="POST" class="space-y-6">
                     @csrf
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {{-- Nom complet --}}
                         <div>
                             <label class="text-[10px] uppercase font-black text-gray-400 tracking-widest ml-1 mb-2 block">Nom complet</label>
                             <input type="text" name="name" required placeholder="EX: JEAN DUPONT" class="w-full bg-black border border-white/10 rounded-2xl px-6 py-4 text-white text-sm focus:border-indigo-500 transition-all outline-none">
                         </div>
-
-                        {{-- N° Licence --}}
                         <div>
                             <label class="text-[10px] uppercase font-black text-gray-400 tracking-widest ml-1 mb-2 block">N° Licence</label>
                             <input type="text" name="license_number" required placeholder="EX: 1422334" class="w-full bg-black border border-white/10 rounded-2xl px-6 py-4 text-white text-sm focus:border-indigo-500 transition-all outline-none">
                         </div>
-
-                        {{-- Points FFTT --}}
                         <div>
                             <label class="text-[10px] uppercase font-black text-gray-400 tracking-widest ml-1 mb-2 block">Points FFTT</label>
                             <input type="number" name="points" required placeholder="500" class="w-full bg-black border border-white/10 rounded-2xl px-6 py-4 text-white text-sm focus:border-indigo-500 transition-all outline-none">
                         </div>
-
-                        {{-- AJOUT DU CHAMP CLUB --}}
                         <div>
                             <label class="text-[10px] uppercase font-black text-gray-400 tracking-widest ml-1 mb-2 block">Club</label>
                             <input type="text" name="club" placeholder="EX: TT OUISTREHAM" class="w-full bg-black border border-white/10 rounded-2xl px-6 py-4 text-white text-sm focus:border-indigo-500 transition-all outline-none">
                         </div>
                     </div>
-
                     <button type="submit" class="w-full bg-white text-black font-black uppercase text-xs tracking-[0.3em] py-6 rounded-2xl hover:bg-indigo-600 hover:text-white transition-all duration-500 transform hover:-translate-y-1 shadow-xl">
                         Enregistrer et générer les accès
                     </button>
@@ -197,7 +213,7 @@
     </div>
 </div>
 
-{{-- Formulaire caché pour la désinscription --}}
+{{-- FORMULAIRE CACHÉ POUR LA DÉSINSCRIPTION --}}
 <form id="unregister-form" action="{{ route('coach.unregister_player') }}" method="POST" class="hidden">
     @csrf
     <input type="hidden" name="player_id" id="unreg-player-id">

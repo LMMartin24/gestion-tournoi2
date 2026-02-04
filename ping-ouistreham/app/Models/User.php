@@ -51,6 +51,7 @@ class User extends Authenticatable
         // Dans ton cas, on peut lier par ID ou par license_number
         return $this->hasMany(Registration::class, 'user_id'); 
     }
+    
 
     // --- RELATIONS COACH ---
 
@@ -97,4 +98,5 @@ class User extends Authenticatable
     {
         return $this->role === 'coach';
     }
+    
 }

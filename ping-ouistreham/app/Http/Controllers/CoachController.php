@@ -28,15 +28,19 @@ class CoachController extends Controller
             return redirect()->route('dashboard')->with('error', "Accès réservé aux entraîneurs.");
         }
 
-        // Récupération des élèves avec leurs inscriptions
+        // Récupération des élèves avec leurs inscriptions (parfait)
         $myPlayers = User::where('coach_id', auth()->id())
             ->with(['registrations.subTable.superTable.tournament'])
             ->get();
         
-        // On récupère uniquement les tournois acceptés et publiés
+        // Optimisation : on charge registrations SUR la superTable
         $availableSubTables = SubTable::whereHas('superTable.tournament', function($q) {
             $q->where('status', 'accepted')->where('is_published', true);
-        })->with(['superTable.tournament', 'registrations'])->get(); 
+        })->with([
+            'superTable.tournament', 
+            'superTable.registrations', // Crucial pour le calcul du remplissage (%)
+            'registrations'             // Crucial pour savoir qui de mon équipe est déjà inscrit
+        ])->get(); 
 
         return view('coach.dashboard', compact('myPlayers', 'availableSubTables'));
     }
@@ -89,6 +93,10 @@ class CoachController extends Controller
     /**
      * Inscrit un joueur (ou le coach) à un tableau.
      */
+/**
+     * Inscrit un joueur (ou le coach) à un tableau.
+     * Refuse l'inscription si la série (SuperTable) est complète.
+     */
     public function registerPlayer(Request $request)
     {
         $request->validate([
@@ -96,28 +104,49 @@ class CoachController extends Controller
             'sub_table_id' => 'required|exists:sub_tables,id',
         ]);
 
-        // On charge explicitement les relations pour que le mail ait les noms du tournoi/tableau
+        // 1. Chargement des données et relations
         $subTable = SubTable::with(['superTable.tournament'])->findOrFail($request->sub_table_id);
         $superTable = $subTable->superTable;
         $player = User::findOrFail($request->player_id);
         $coach = auth()->user();
 
-        // Sécurité : Droits du coach
+        // 2. SÉCURITÉ : Droits du coach
         if ($player->coach_id !== $coach->id && $player->id !== $coach->id) {
             return back()->with('error', "Action non autorisée pour ce joueur.");
         }
 
-        // Préparation du nom
+        // 3. VÉRIFICATION DE LA CAPACITÉ (SUPER TABLE)
+        // On compte toutes les inscriptions confirmées pour cette série
+        $currentInscriptionsCount = Registration::whereHas('subTable', function($q) use ($superTable) {
+            $q->where('super_table_id', $superTable->id);
+        })
+        ->where('status', 'confirmed')
+        ->count();
+
+        $limit = (int) $superTable->max_players;
+
+        // Bloquer si la limite est atteinte
+        if ($currentInscriptionsCount >= $limit) {
+            return back()->with('error', "Impossible d'inscrire {$player->name} : Le tableau {$superTable->name} est complet ({$limit}/{$limit}).");
+        }
+
+        // 4. VÉRIFICATION DES POINTS
+        if ($player->points > $subTable->points_max || $player->points < $subTable->points_min) {
+            return back()->with('error', "Le classement ({$player->points} pts) ne permet pas l'accès à ce tableau.");
+        }
+
+        // 5. PRÉPARATION DU NOM
         $nameParts = explode(' ', trim($player->name));
         $firstname = $nameParts[0];
         $lastname = count($nameParts) > 1 ? implode(' ', array_slice($nameParts, 1)) : '';
 
+        // 6. CRÉATION ET ENVOI MAIL
         try {
             $registration = Registration::create([
                 'user_id' => $player->id,
                 'sub_table_id' => $subTable->id,
                 'created_by' => $coach->id,
-                'status' => 'confirmed', // On force en confirmé pour le test
+                'status' => 'confirmed', 
                 'player_license' => $player->license_number,
                 'player_points' => $player->points,
                 'player_firstname' => $firstname,
@@ -125,15 +154,14 @@ class CoachController extends Controller
                 'registered_at' => now(),
             ]);
 
-            // Envoi du mail avec l'objet registration ET l'objet coach
+            // Envoi du mail avec l'objet registration ET l'objet coach (pour le nom dans le mail)
             Mail::to('tournoi-apo@skopee.fr')->send(new RegistrationConfirmationCoach($registration, $coach));
 
-            return back()->with('success', "{$player->name} est inscrit ! Admin prévenu.");
+            return back()->with('success', "{$player->name} est inscrit avec succès !");
 
         } catch (\Exception $e) {
-            // Log l'erreur réelle pour débugger en SSH (storage/logs/laravel.log)
             Log::error("Erreur inscription coach : " . $e->getMessage());
-            return back()->with('error', "Erreur technique : " . $e->getMessage());
+            return back()->with('error', "Erreur technique lors de l'inscription.");
         }
     }
     /**
