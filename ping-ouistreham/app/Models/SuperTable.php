@@ -52,5 +52,21 @@ class SuperTable extends Model
         return $confirmedCount >= (int) $this->max_players;
     }
 
+    // app/Models/SuperTable.php
+
+    public function registrations()
+    {
+        // Si tes inscriptions sont liées aux SubTables, 
+        // on utilise hasManyThrough pour y accéder depuis la SuperTable
+        return $this->hasManyThrough(
+            \App\Models\Registration::class, 
+            \App\Models\SubTable::class,
+            'super_table_id', // Clé étrangère sur SubTable
+            'sub_table_id',   // Clé étrangère sur Registration
+            'id',             // Clé locale sur SuperTable
+            'id'              // Clé locale sur SubTable
+        );
+    }
+
     
 }
