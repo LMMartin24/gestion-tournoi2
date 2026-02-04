@@ -33,14 +33,15 @@
                         $max = (int) $table->superTable->max_players;
                         $current = $table->superTable->registrations->where('status', 'confirmed')->count();
                         $percentage = $max > 0 ? round(($current / $max) * 100) : 0;
+                        // On définit le statut complet
                         $isFull = $current >= $max;
                     @endphp
 
-                    <div class="bg-[#0f0f0f] border {{ $isFull ? 'border-orange-500/40' : 'border-white/5' }} p-8 rounded-[2.5rem] shadow-2xl flex flex-col group hover:border-indigo-500/30 transition-all relative overflow-hidden">
+                    <div class="bg-[#0f0f0f] border {{ $isFull ? 'border-red-500/40' : 'border-white/5' }} p-8 rounded-[2.5rem] shadow-2xl flex flex-col group hover:border-indigo-500/30 transition-all relative overflow-hidden">
                         
                         @if($isFull)
-                            <div class="absolute top-4 right-[-35px] bg-orange-600 text-white text-[8px] font-black py-1 px-10 transform rotate-45 uppercase tracking-tighter shadow-xl">
-                                Liste d'attente
+                            <div class="absolute top-4 right-[-35px] bg-red-600 text-white text-[8px] font-black py-1 px-10 transform rotate-45 uppercase tracking-tighter shadow-xl">
+                                COMPLET / FULL
                             </div>
                         @endif
 
@@ -60,15 +61,15 @@
 
                         <div class="mb-6">
                             <div class="flex justify-between items-center mb-2">
-                                <span class="text-[9px] font-black uppercase tracking-widest {{ $isFull ? 'text-orange-500' : 'text-gray-500' }}">
-                                    @if($isFull) TABLEAU COMPLET (ATTENTE) @else REMPLISSAGE @endif
+                                <span class="text-[9px] font-black uppercase tracking-widest {{ $isFull ? 'text-red-500' : 'text-gray-500' }}">
+                                    @if($isFull) INSCRIPTIONS BLOQUÉES @else REMPLISSAGE @endif
                                 </span>
-                                <span class="text-[10px] font-black {{ $isFull ? 'text-orange-500' : 'text-white' }}">
+                                <span class="text-[10px] font-black {{ $isFull ? 'text-red-500' : 'text-white' }}">
                                     {{ $current }} / {{ $max }} ({{ $percentage }}%)
                                 </span>
                             </div>
                             <div class="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
-                                <div class="h-full transition-all duration-1000 {{ $isFull ? 'bg-orange-600' : 'bg-indigo-600' }}" 
+                                <div class="h-full transition-all duration-1000 {{ $isFull ? 'bg-red-600' : 'bg-indigo-600' }}" 
                                      style="width: {{ $percentage }}%"></div>
                             </div>
                         </div>
@@ -84,9 +85,8 @@
                                 <button type="button" 
                                     onclick="confirmUnregister('{{ $registration->user_id }}', '{{ $table->id }}', '{{ $registration->player_firstname }} {{ $registration->player_lastname }}')"
                                     class="flex items-center gap-2 text-[9px] bg-white/5 text-gray-400 border border-white/5 px-3 py-1.5 rounded-xl font-black uppercase tracking-widest hover:bg-red-500/20 hover:text-red-500 hover:border-red-500/30 transition-all group/badge">
-                                    <span class="w-1.5 h-1.5 rounded-full {{ $registration->status === 'confirmed' ? 'bg-green-500 shadow-[0_0_5px_green]' : 'bg-orange-500 shadow-[0_0_5px_orange]' }} group-hover/badge:bg-red-500"></span>
+                                    <span class="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_5px_green] group-hover/badge:bg-red-500"></span>
                                     {{ $registration->player_firstname }} {{ substr($registration->player_lastname, 0, 1) }}.
-                                    @if($registration->status === 'waiting') <span class="text-[7px] opacity-70">(ATTENTE)</span> @endif
                                     <span class="opacity-0 group-hover/badge:opacity-100 ml-1 text-xs">×</span>
                                 </button>
                             @endforeach
@@ -96,8 +96,8 @@
                             @csrf
                             <input type="hidden" name="sub_table_id" value="{{ $table->id }}">
                             <div class="space-y-4">
-                                <select name="player_id" required 
-                                        class="w-full bg-black border border-white/10 rounded-2xl px-5 py-4 text-white text-[10px] font-black uppercase tracking-widest focus:border-indigo-500 outline-none transition-all">
+                                <select name="player_id" required {{ $isFull ? 'disabled' : '' }}
+                                        class="w-full bg-black border border-white/10 rounded-2xl px-5 py-4 text-white text-[10px] font-black uppercase tracking-widest focus:border-indigo-500 outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                                     <option value="" disabled selected>Choisir un joueur...</option>
                                     @if(auth()->user()->points <= $table->points_max)
                                         <option value="{{ auth()->id() }}">Moi-même (Coach) - {{ auth()->user()->points }} pts</option>
@@ -113,9 +113,15 @@
                                     @endforeach
                                 </select>
 
-                                <button type="submit" class="w-full {{ $isFull ? 'bg-orange-600 shadow-orange-500/20' : 'bg-indigo-600 shadow-indigo-500/20' }} hover:bg-white hover:text-black text-white font-black uppercase text-[10px] tracking-[0.3em] py-5 rounded-2xl transition-all shadow-lg">
-                                    {{ $isFull ? "S'inscrire en liste d'attente" : "Valider l'inscription" }}
-                                </button>
+                                @if($isFull)
+                                    <div class="w-full bg-red-500/10 border border-red-500/20 text-red-500 font-black uppercase text-[9px] tracking-widest py-5 rounded-2xl text-center">
+                                        Tableau complet
+                                    </div>
+                                @else
+                                    <button type="submit" class="w-full bg-indigo-600 shadow-indigo-500/20 hover:bg-white hover:text-black text-white font-black uppercase text-[10px] tracking-[0.3em] py-5 rounded-2xl transition-all shadow-lg">
+                                        Valider l'inscription
+                                    </button>
+                                @endif
                             </div>
                         </form>
                     </div>
@@ -127,7 +133,7 @@
             </div>
         </div>
 
-        {{-- SECTION 2 : LISTE DES ÉLÈVES (INCHANGÉE MAIS PROPRE) --}}
+        {{-- SECTION 2 : LISTE DES ÉLÈVES --}}
         <div class="mb-20">
             <h3 class="text-2xl font-black uppercase italic mb-8 text-white flex items-center gap-3">
                 <span class="w-2 h-8 bg-indigo-600 rounded-full"></span>

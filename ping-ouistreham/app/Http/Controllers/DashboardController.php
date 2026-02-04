@@ -8,6 +8,8 @@ use App\Models\Registration;
 use Illuminate\Support\Facades\Auth;
 use App\Mail\RegistrationConfirmation;
 use Illuminate\Support\Facades\Mail; 
+use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
@@ -23,8 +25,7 @@ class DashboardController extends Controller
             ->with(['subTable.superTable.tournament'])
             ->get();
 
-        // 2. Tableaux disponibles (Filtrage par points et visibilité)
-        // Utilisation du nom $availableSubTables pour correspondre à ton erreur précédente
+        // 2. Tableaux disponibles (Visibilité + Points)
         $availableSubTables = SubTable::whereHas('superTable.tournament', function($q) {
                 $q->where('status', 'accepted')->where('is_published', true);
             })
@@ -33,10 +34,10 @@ class DashboardController extends Controller
             ->whereDoesntHave('registrations', function($q) use ($user) {
                 $q->where('user_id', $user->id);
             })
-            ->with(['superTable.tournament'])
+            ->with(['superTable.tournament', 'superTable.registrations'])
             ->get();
 
-        // 3. Calcul du montant total à régler
+        // 3. Calcul du montant total
         $totalToPay = $myRegistrations->where('status', 'confirmed')->sum(function($reg) {
             return $reg->subTable->entry_fee;
         });
@@ -45,127 +46,114 @@ class DashboardController extends Controller
     }
 
     /**
-     * Gère l'inscription d'un joueur individuel (Dashboard classique).
+     * Inscription classique (bloquée si plein).
      */
     public function register(Request $request, SubTable $subTable)
-        {
-            $user = Auth::user();
-            $superTable = $subTable->superTable;
-            $tournament = $superTable->tournament;
+    {
+        $user = Auth::user();
+        $superTable = $subTable->superTable;
+        $tournament = $superTable->tournament;
 
-            // 1. SÉCURITÉ : Date limite de clôture
-            if (now()->gt($tournament->registration_deadline)) {
-                $dateFormatted = Carbon::parse($tournament->registration_deadline)->format('d/m/Y H:i');
-                return back()->with('error', "Trop tard ! Les inscriptions sont fermées depuis le $dateFormatted.");
-            }
-
-            // 2. LIMITE DE 2 TABLEAUX PAR TOURNOI
-            $registrationsInThisTournament = Registration::where('user_id', $user->id)
-                ->whereHas('subTable.superTable', function($q) use ($tournament) {
-                    $q->where('tournament_id', $tournament->id);
-                })->count();
-
-            if ($registrationsInThisTournament >= 2) {
-                return back()->with('error', 'Limite atteinte : Tu es déjà inscrit à 2 tableaux pour ce tournoi.');
-            }
-
-            // 3. VÉRIFICATION DES POINTS
-            if ($user->points > $subTable->points_max || $user->points < $subTable->points_min) {
-                return back()->with('error', 'Ton classement (' . $user->points . ' pts) ne correspond pas à ce tableau.');
-            }
-
-            // 4. VÉRIFICATION DU CRÉNEAU (Une seule inscription par SuperTable)
-            $alreadyInSlot = Registration::where('user_id', $user->id)
-                ->whereHas('subTable', function($q) use ($superTable) {
-                    $q->where('super_table_id', $superTable->id);
-                })->exists();
-
-            if ($alreadyInSlot) {
-                return back()->with('error', 'Tu es déjà inscrit dans la série ' . $superTable->name . ' (créneau identique).');
-            }
-
-            // 5. CAPACITÉ : Vérification du nombre d'inscrits CONFIRMÉS sur le SuperTable
-            $totalConfirmed = Registration::whereHas('subTable', function($q) use ($superTable) {
-                    $q->where('super_table_id', $superTable->id);
-                })
-                ->where('status', 'confirmed')
-                ->count();
-
-            $limit = (int) $superTable->max_players;
-            $status = ($totalConfirmed < $limit) ? 'confirmed' : 'waiting_list';
-
-            // 6. DÉCOUPAGE DU NOM (Pour l'export)
-            $nameParts = explode(' ', trim($user->name));
-            $firstname = $nameParts[0];
-            $lastname = count($nameParts) > 1 ? implode(' ', array_slice($nameParts, 1)) : '';
-
-            // 7. CRÉATION DE L'INSCRIPTION
-            try {
-                $registration = Registration::create([
-                    'user_id'          => $user->id,
-                    'created_by'       => $user->id,
-                    'sub_table_id'     => $subTable->id,
-                    'player_license'   => $user->license_number,
-                    'player_firstname' => $firstname,
-                    'player_lastname'  => $lastname,
-                    'player_points'    => $user->points,
-                    'status'           => $status,
-                    'priority'         => 'primary',
-                    'registered_at'    => now(),
-                ]);
-
-                // 8. ENVOI DU MAIL À L'ADMINISTRATION
-                // On remplace $user->email par l'adresse fixe
-                Mail::to('tournoi-apo@skopee.fr')->send(new RegistrationConfirmation($registration));
-
-                if ($status === 'confirmed') {
-                    return back()->with('success', 'Inscription validée pour le ' . $subTable->label . ' ! (Notification envoyée à l\'admin)');
-                } else {
-                    return back()->with('error', 'Série complète : tu as été placé en LISTE D\'ATTENTE pour le ' . $subTable->label . '. (Notification envoyée à l\'admin)');
-                }
-
-            } catch (\Exception $e) {
-                return back()->with('error', 'Une erreur est survenue lors de l\'inscription : ' . $e->getMessage());
-            }
+        // 1. Date limite
+        if (now()->gt($tournament->registration_deadline)) {
+            $dateFormatted = Carbon::parse($tournament->registration_deadline)->format('d/m/Y H:i');
+            return back()->with('error', "Trop tard ! Les inscriptions sont fermées depuis le $dateFormatted.");
         }
+
+        // 2. Limite de 2 tableaux
+        $registrationsInThisTournament = Registration::where('user_id', $user->id)
+            ->whereHas('subTable.superTable', function($q) use ($tournament) {
+                $q->where('tournament_id', $tournament->id);
+            })->count();
+
+        if ($registrationsInThisTournament >= 2) {
+            return back()->with('error', 'Tu es déjà inscrit à 2 tableaux pour ce tournoi.');
+        }
+
+        // 3. Vérification des points
+        if ($user->points > $subTable->points_max || $user->points < $subTable->points_min) {
+            return back()->with('error', 'Ton classement (' . $user->points . ' pts) ne correspond pas à ce tableau.');
+        }
+
+        // 4. Vérification du créneau (Série identique)
+        $alreadyInSlot = Registration::where('user_id', $user->id)
+            ->whereHas('subTable', function($q) use ($superTable) {
+                $q->where('super_table_id', $superTable->id);
+            })->exists();
+
+        if ($alreadyInSlot) {
+            return back()->with('error', 'Tu es déjà inscrit dans la série ' . $superTable->label . '.');
+        }
+
+        // 5. CAPACITÉ : Blocage si plein
+        $totalConfirmed = Registration::whereHas('subTable', function($q) use ($superTable) {
+                $q->where('super_table_id', $superTable->id);
+            })
+            ->where('status', 'confirmed')
+            ->count();
+
+        $limit = (int) $superTable->max_players;
+
+        if ($totalConfirmed >= $limit) {
+            return back()->with('error', "Ce tableau est complet. L'organisation gère désormais la liste d'attente manuellement.");
+        }
+
+        // 6. Découpage nom
+        $nameParts = explode(' ', trim($user->name));
+        $firstname = $nameParts[0];
+        $lastname = count($nameParts) > 1 ? implode(' ', array_slice($nameParts, 1)) : '';
+
+        // 7. Création
+        try {
+            $registration = Registration::create([
+                'user_id'          => $user->id,
+                'created_by'       => $user->id,
+                'sub_table_id'     => $subTable->id,
+                'player_license'   => $user->license_number,
+                'player_firstname' => $firstname,
+                'player_lastname'  => $lastname,
+                'player_points'    => $user->points,
+                'status'           => 'confirmed', // Toujours confirmé
+                'priority'         => 'primary',
+                'registered_at'    => now(),
+            ]);
+
+            Mail::to('tournoi-apo@skopee.fr')->send(new RegistrationConfirmation($registration));
+
+            return back()->with('success', 'Inscription validée pour le ' . $subTable->label . ' !');
+
+        } catch (\Exception $e) {
+            Log::error("Erreur inscription classique : " . $e->getMessage());
+            return back()->with('error', 'Une erreur technique est survenue.');
+        }
+    }
+
     /**
-     * Annule une inscription (Dashboard classique).
+     * Désinscription (sans repêchage automatique).
      */
     public function unregister(SubTable $subTable)
     {
-        // 1. On récupère l'instance précise AVEC ses relations
-        $registration = Registration::with('subTable.superTable')
-            ->where('user_id', auth()->id())
+        $registration = Registration::where('user_id', auth()->id())
             ->where('sub_table_id', $subTable->id)
             ->first();
 
-        // 2. On vérifie si l'inscription existe avant de tenter la suppression
         if (!$registration) {
             return back()->with('error', "Inscription introuvable.");
         }
 
-        // --- AJOUT : NOTIFICATION PAR MAIL À L'ADMIN ---
         try {
-            // On envoie le mail à l'adresse fixe de l'organisation
-            \Illuminate\Support\Facades\Mail::to('tournoi-apo@skopee.fr')
-                ->send(new \App\Mail\UnregistrationNotification($registration));
+            Mail::to('tournoi-apo@skopee.fr')->send(new \App\Mail\UnregistrationNotification($registration));
+            
+            $registration->delete();
+            return back()->with('success', 'Ta désinscription a bien été prise en compte.');
+            
         } catch (\Exception $e) {
-            // On log l'erreur si besoin, mais on ne bloque pas l'utilisateur 
-            // pour un problème d'envoi de mail de notification
-            \Illuminate\Support\Facades\Log::error("Erreur mail désinscription : " . $e->getMessage());
+            Log::error("Erreur désinscription : " . $e->getMessage());
+            $registration->delete(); // On supprime quand même
+            return back()->with('success', 'Désinscription effectuée (erreur mail admin).');
         }
-        // -----------------------------------------------
-
-        // 3. On appelle delete() sur l'objet lui-même. 
-        // C'est cette action précise qui déclenche l'Observer pour repêcher le suivant !
-        $registration->delete();
-
-        return back()->with('success', 'Désinscription effectuée. Si quelqu\'un attendait, il a pris ta place !');
     }
 
-    /**
-     * Redirige l'utilisateur vers son dashboard spécifique selon son rôle.
-     */
     public function redirectBasedOnRole()
     {
         $user = auth()->user();
@@ -178,8 +166,6 @@ class DashboardController extends Controller
             return redirect()->route('coach.dashboard');
         }
 
-        // CORRECT : On redirige vers la route nommée qui pointe vers index()
         return redirect()->route('player.dashboard');
     }
-    
 }

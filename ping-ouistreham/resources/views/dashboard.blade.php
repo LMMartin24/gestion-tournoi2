@@ -4,6 +4,22 @@
 <div class="min-h-screen bg-[#0a0a0a] text-white pt-24 pb-12">
     <div class="max-w-7xl mx-auto px-6 lg:px-12">
         
+        {{-- AFFICHAGE DES ERREURS ET SUCCÈS --}}
+        @if ($errors->any() || session('success') || session('error'))
+            <div class="mb-10 space-y-4">
+                @if(session('success'))
+                    <div class="bg-green-500/20 border border-green-500/50 text-green-500 p-4 rounded-2xl text-[10px] font-black uppercase tracking-widest">
+                        // SUCCESS: {{ session('success') }}
+                    </div>
+                @endif
+                @if(session('error') || $errors->any())
+                    <div class="bg-red-500/20 border border-red-500/50 text-red-500 p-4 rounded-2xl text-[10px] font-black uppercase tracking-widest">
+                        // ERROR: {{ session('error') ?? $errors->first() }}
+                    </div>
+                @endif
+            </div>
+        @endif
+
         {{-- HEADER DU DASHBOARD --}}
         <div class="mb-12">
             <h1 class="text-4xl md:text-6xl font-[1000] uppercase italic tracking-tighter">
@@ -49,8 +65,8 @@
                                         
                                         @if($registration->status === 'confirmed')
                                             <span class="bg-green-500/10 text-green-500 text-[9px] font-black uppercase px-2 py-0.5 rounded-md border border-green-500/20">Confirmé</span>
-                                        @elseif($registration->status === 'waiting_list')
-                                            <span class="bg-orange-500/10 text-orange-500 text-[9px] font-black uppercase px-2 py-0.5 rounded-md border border-orange-500/20">Liste d'attente</span>
+                                        @else
+                                            <span class="bg-orange-500/10 text-orange-500 text-[9px] font-black uppercase px-2 py-0.5 rounded-md border border-orange-500/20">En attente (Modéré)</span>
                                         @endif
                                     </div>
                                     
@@ -95,7 +111,7 @@
                         </div>
                         <span class="font-black uppercase italic tracking-tighter text-lg">Total à régler sur place</span>
                     </div>
-                    <span class="text-4xl font-[1000] italic">{{ $totalToPay }}€</span>
+                    <span class="text-4xl font-[1000] italic">{{ number_format($totalToPay, 2) }}€</span>
                 </div>
             @endif
         </div>
@@ -120,7 +136,7 @@
                             <span class="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
                         </span>
                         <p class="text-[10px] font-black uppercase text-orange-500 tracking-tighter">
-                            Tu as atteint la limite de 2 tableaux
+                            Tu as atteint ta limite
                         </p>
                     </div>
                 @endif
@@ -128,31 +144,55 @@
 
             @if($availableSubTables->isEmpty())
                 <div class="bg-[#111] border border-white/5 rounded-3xl p-12 text-center text-gray-500 italic">
-                    Aucun nouveau tableau disponible.
+                    Aucun nouveau tableau disponible selon ton classement.
                 </div>
             @else
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     @foreach($availableSubTables as $subTable)
-                        <div class="bg-[#111] border border-white/5 p-8 rounded-[2rem] hover:border-green-500/50 transition-all flex flex-col justify-between group">
+                        @php
+                            $max = (int) $subTable->superTable->max_players;
+                            $current = $subTable->superTable->registrations->where('status', 'confirmed')->count();
+                            $isFull = $current >= $max;
+                            $percentage = $max > 0 ? round(($current / $max) * 100) : 0;
+                        @endphp
+
+                        <div class="bg-[#111] border {{ $isFull ? 'border-red-500/30' : 'border-white/5' }} p-8 rounded-[2rem] hover:border-indigo-500/50 transition-all flex flex-col justify-between group relative overflow-hidden">
+                            @if($isFull)
+                                <div class="absolute top-3 right-[-30px] bg-red-600 text-white text-[7px] font-black py-1 px-8 transform rotate-45 uppercase tracking-tighter shadow-xl">
+                                    COMPLET
+                                </div>
+                            @endif
+
                             <div>
                                 <div class="flex justify-between items-start mb-2">
-                                    <h3 class="text-3xl font-[1000] uppercase italic leading-none group-hover:text-green-500 transition-colors">
+                                    <h3 class="text-3xl font-[1000] uppercase italic leading-none group-hover:text-indigo-400 transition-colors">
                                         {{ $subTable->label }}
                                     </h3>
-                                    <span class="text-green-500 font-black italic text-lg">{{ number_format($subTable->entry_fee, 2) }}€</span>
+                                    <span class="{{ $isFull ? 'text-red-500' : 'text-green-500' }} font-black italic text-lg">{{ number_format($subTable->entry_fee, 2) }}€</span>
                                 </div>
                                 
-                                <div class="mb-6">
+                                <div class="mb-4">
                                     <p class="text-indigo-500 text-[10px] font-black uppercase tracking-[0.2em]">{{ $subTable->superTable->tournament->name }}</p>
+                                </div>
+
+                                {{-- Barre de remplissage --}}
+                                <div class="mb-6">
+                                    <div class="flex justify-between text-[8px] font-black uppercase mb-1 tracking-widest">
+                                        <span class="{{ $isFull ? 'text-red-500' : 'text-gray-500' }}">{{ $isFull ? 'TABLEAU PLEIN' : 'Places disponibles' }}</span>
+                                        <span class="text-white">{{ $current }} / {{ $max }}</span>
+                                    </div>
+                                    <div class="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                                        <div class="h-full {{ $isFull ? 'bg-red-600' : 'bg-indigo-600' }} transition-all duration-700" style="width: {{ $percentage }}%"></div>
+                                    </div>
                                 </div>
 
                                 <div class="space-y-2 mb-8 border-t border-white/5 pt-4 text-[10px] font-black uppercase">
                                     <div class="flex justify-between text-gray-600">
-                                        <span>Points</span>
+                                        <span>Points requis</span>
                                         <span class="text-white">{{ $subTable->points_min }} - {{ $subTable->points_max }}</span>
                                     </div>
                                     <div class="flex justify-between text-gray-600">
-                                        <span>Début</span>
+                                        <span>Début de série</span>
                                         <span class="text-white">{{ \Carbon\Carbon::parse($subTable->superTable->start_time)->format('H:i') }}</span>
                                     </div>
                                 </div>
@@ -162,10 +202,14 @@
                                 <button disabled class="w-full bg-white/5 text-gray-600 font-[1000] py-4 rounded-2xl uppercase tracking-widest text-xs cursor-not-allowed border border-white/5">
                                     Limite atteinte
                                 </button>
+                            @elseif($isFull)
+                                <div class="w-full bg-red-500/10 border border-red-500/20 text-red-500 font-black uppercase text-[10px] tracking-widest py-4 rounded-2xl text-center">
+                                    Plus de place
+                                </div>
                             @else
                                 <form action="{{ route('player.register', $subTable->id) }}" method="POST">
                                     @csrf
-                                    <button type="submit" class="w-full bg-white text-black font-[1000] py-4 rounded-2xl uppercase tracking-widest text-xs hover:bg-green-500 hover:text-white transition-all transform hover:scale-[1.02]">
+                                    <button type="submit" class="w-full bg-white text-black font-[1000] py-4 rounded-2xl uppercase tracking-widest text-xs hover:bg-indigo-600 hover:text-white transition-all transform hover:scale-[1.02]">
                                         S'inscrire
                                     </button>
                                 </form>
