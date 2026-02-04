@@ -12,12 +12,10 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
+
+// Utilisation de tes nouveaux Mailables avec suffixe Coach
 use App\Mail\RegistrationConfirmationCoach;
 use App\Mail\UnregistrationNotificationCoach;
-
-// Import des Mailables
-use App\Mail\RegistrationConfirmation;
-use App\Mail\UnregistrationNotification;
 
 class CoachController extends Controller
 {
@@ -71,7 +69,6 @@ class CoachController extends Controller
         $randomPassword = Str::random(10);
 
         // 4. Création de l'élève
-        // On utilise le club saisi, sinon celui du coach
         $studentClub = $validated['club'] ?? auth()->user()->club;
 
         $student = User::create([
@@ -170,7 +167,7 @@ class CoachController extends Controller
                 'registered_at' => now(),
             ]);
 
-            // 9. ENVOI DU MAIL À L'ADMIN (Systématique)
+            // 9. ENVOI DU MAIL À L'ADMIN
             Mail::to('tournoi-apo@skopee.fr')->send(new RegistrationConfirmationCoach($registration));
 
             if ($status === 'confirmed') {
@@ -194,22 +191,28 @@ class CoachController extends Controller
             ->where('user_id', $request->player_id)
             ->where('sub_table_id', $request->sub_table_id)
             ->firstOrFail();
+        
+        $user = auth()->user();
+        $player = $registration->user;
             
-        if ($registration->created_by !== auth()->id() && 
-            $registration->user_id !== auth()->id() && 
-            !auth()->user()->isSuperAdmin()) {
-            abort(403, "Action non autorisée.");
+        // Correction de la condition de sécurité (évite la 403)
+        // Autorisé si : Créateur OU Coach du joueur OU le joueur lui-même OU SuperAdmin
+        if ($registration->created_by === $user->id || 
+            $player->coach_id === $user->id || 
+            $registration->user_id === $user->id || 
+            $user->isSuperAdmin()) 
+        {
+            // ENVOI DU MAIL AVANT SUPPRESSION
+            try {
+                Mail::to('tournoi-apo@skopee.fr')->send(new UnregistrationNotificationCoach($registration));
+            } catch (\Exception $e) {
+                Log::error("Erreur mail désinscription coach : " . $e->getMessage());
+            }
+
+            $registration->delete();
+            return back()->with('success', "Désinscription effectuée et admin prévenu.");
         }
 
-        // ENVOI DU MAIL AVANT SUPPRESSION
-        try {
-            Mail::to('tournoi-apo@skopee.fr')->send(new UnregistrationNotificationCoach($registration));
-        } catch (\Exception $e) {
-            Log::error("Erreur mail désinscription coach : " . $e->getMessage());
-        }
-
-        $registration->delete();
-
-        return back()->with('success', "Désinscription effectuée et admin prévenu.");
+        abort(403, "Action non autorisée.");
     }
 }

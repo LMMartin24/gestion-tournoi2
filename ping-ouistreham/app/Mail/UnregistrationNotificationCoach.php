@@ -12,15 +12,17 @@ class UnregistrationNotificationCoach extends Mailable
     use Queueable, SerializesModels;
 
     public $registration;
+    public $coach; // Ajout du coach
 
-    public function __construct(Registration $registration)
+    public function __construct($registration, $coach = null)
     {
         $this->registration = $registration;
+        $this->coach = $coach;
     }
 
     public function build()
     {
         return $this->subject('Désinscription : ' . $this->registration->player_firstname . ' ' . $this->registration->player_lastname)
-                    ->view('emails.unregistration_notification_coach');
+                    ->view('emails.unregistration_notification');
     }
 }
