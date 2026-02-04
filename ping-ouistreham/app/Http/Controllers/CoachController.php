@@ -89,14 +89,15 @@ class CoachController extends Controller
     /**
      * Inscrit un joueur (ou le coach) à un tableau.
      */
-    public function registerPlayer(Request $request)
+public function registerPlayer(Request $request)
     {
         $request->validate([
             'player_id' => 'required|exists:users,id',
             'sub_table_id' => 'required|exists:sub_tables,id',
         ]);
 
-        $subTable = SubTable::with('superTable.tournament')->findOrFail($request->sub_table_id);
+        // On charge bien toute la hiérarchie pour le mail
+        $subTable = SubTable::with(['superTable.tournament'])->findOrFail($request->sub_table_id);
         $superTable = $subTable->superTable;
         $player = User::findOrFail($request->player_id);
         $coach = auth()->user();
@@ -107,8 +108,8 @@ class CoachController extends Controller
             return back()->with('error', "Inscriptions closes depuis le $dateFormatted.");
         }
 
-        // 2. SÉCURITÉ : Droits du coach
-        if ($player->coach_id !== $coach->id && $player->id !== $coach->id) {
+        // 2. SÉCURITÉ : Droits (Coach sur élève OU Coach sur lui-même)
+        if ($player->coach_id != $coach->id && $player->id != $coach->id) {
             return back()->with('error', "Action non autorisée pour ce joueur.");
         }
 
@@ -167,46 +168,44 @@ class CoachController extends Controller
                 'registered_at' => now(),
             ]);
 
-            // 9. ENVOI DU MAIL À L'ADMIN
-            Mail::to('tournoi-apo@skopee.fr')->send(new RegistrationConfirmationCoach($registration));
+            // Important : On recharge les relations sur l'objet créé pour le mail
+            $registration->load(['subTable.superTable.tournament', 'user']);
 
-            if ($status === 'confirmed') {
-                return back()->with('success', "{$player->name} est inscrit ! Un mail de confirmation a été envoyé à l'admin.");
-            } else {
-                return back()->with('error', "Série COMPLÈTE : {$player->name} est en LISTE D'ATTENTE.");
-            }
+            // 9. ENVOI DU MAIL (On passe le coach en 2ème argument)
+            Mail::to('tournoi-apo@skopee.fr')->send(new RegistrationConfirmationCoach($registration, $coach));
+
+            $msg = ($status === 'confirmed') ? "inscrit !" : "en LISTE D'ATTENTE.";
+            return back()->with('success', "{$player->name} est {$msg} L'admin a été prévenu.");
 
         } catch (\Exception $e) {
             Log::error("Erreur inscription coach : " . $e->getMessage());
-            return back()->with('error', "Erreur technique lors de l'inscription.");
+            return back()->with('error', "Erreur technique.");
         }
     }
-
     /**
      * Désinscrit un joueur et prévient l'admin.
      */
     public function unregisterPlayer(Request $request)
     {
-        $registration = Registration::with(['subTable.superTable', 'user'])
+        // On récupère les relations nécessaires pour le mail
+        $registration = Registration::with(['subTable.superTable.tournament', 'user'])
             ->where('user_id', $request->player_id)
             ->where('sub_table_id', $request->sub_table_id)
             ->firstOrFail();
-        
+            
         $user = auth()->user();
         $player = $registration->user;
             
-        // Correction de la condition de sécurité (évite la 403)
-        // Autorisé si : Créateur OU Coach du joueur OU le joueur lui-même OU SuperAdmin
-        if ($registration->created_by === $user->id || 
-            $player->coach_id === $user->id || 
-            $registration->user_id === $user->id || 
+        // Sécurité : On autorise si c'est le coach du joueur OU le créateur OU l'admin
+        if ($player->coach_id === $user->id || 
+            $registration->created_by === $user->id || 
             $user->isSuperAdmin()) 
         {
-            // ENVOI DU MAIL AVANT SUPPRESSION
             try {
-                Mail::to('tournoi-apo@skopee.fr')->send(new UnregistrationNotificationCoach($registration));
+                // On passe l'utilisateur connecté (le coach) au Mailable
+                Mail::to('tournoi-apo@skopee.fr')->send(new UnregistrationNotificationCoach($registration, $user));
             } catch (\Exception $e) {
-                Log::error("Erreur mail désinscription coach : " . $e->getMessage());
+                Log::error("Erreur mail désinscription : " . $e->getMessage());
             }
 
             $registration->delete();

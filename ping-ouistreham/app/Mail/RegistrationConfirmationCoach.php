@@ -12,15 +12,17 @@ class RegistrationConfirmationCoach extends Mailable
     use Queueable, SerializesModels;
 
     public $registration;
+    public $coach;
 
-    public function __construct(Registration $registration)
+    public function __construct($registration, $coach = null)
     {
         $this->registration = $registration;
+        $this->coach = $coach;
     }
 
     public function build()
     {
-        return $this->subject('Nouvelle inscription : ' . $this->registration->player_firstname . ' ' . $this->registration->player_lastname)
+        return $this->subject('Nouvelle Inscription : ' . $this->registration->player_firstname . ' ' . $this->registration->player_lastname)
                     ->view('emails.registration_confirmation_coach');
     }
 }
