@@ -33,13 +33,20 @@
                         $max = (int) $table->superTable->max_players;
                         $current = $table->superTable->registrations->where('status', 'confirmed')->count();
                         $percentage = $max > 0 ? round(($current / $max) * 100) : 0;
-                        // On définit le statut complet
+                        
                         $isFull = $current >= $max;
+                        $isLocked = $table->superTable->is_locked;
                     @endphp
 
-                    <div class="bg-[#0f0f0f] border {{ $isFull ? 'border-red-500/40' : 'border-white/5' }} p-8 rounded-[2.5rem] shadow-2xl flex flex-col group hover:border-indigo-500/30 transition-all relative overflow-hidden">
+                    {{-- Card Container avec bordure dynamique --}}
+                    <div class="bg-[#0f0f0f] border {{ $isLocked ? 'border-amber-500/40' : ($isFull ? 'border-red-500/40' : 'border-white/5') }} p-8 rounded-[2.5rem] shadow-2xl flex flex-col group hover:border-indigo-500/30 transition-all relative overflow-hidden">
                         
-                        @if($isFull)
+                        {{-- Ruban Statut (Ribbon) --}}
+                        @if($isLocked)
+                            <div class="absolute top-4 right-[-35px] bg-amber-500 text-black text-[8px] font-black py-1 px-10 transform rotate-45 uppercase tracking-tighter shadow-xl">
+                                BLOQUÉ / LOCKED
+                            </div>
+                        @elseif($isFull)
                             <div class="absolute top-4 right-[-35px] bg-red-600 text-white text-[8px] font-black py-1 px-10 transform rotate-45 uppercase tracking-tighter shadow-xl">
                                 COMPLET / FULL
                             </div>
@@ -59,22 +66,29 @@
                             </span>
                         </div>
 
+                        {{-- Barre de progression --}}
                         <div class="mb-6">
                             <div class="flex justify-between items-center mb-2">
-                                <span class="text-[9px] font-black uppercase tracking-widest {{ $isFull ? 'text-red-500' : 'text-gray-500' }}">
-                                    @if($isFull) INSCRIPTIONS BLOQUÉES @else REMPLISSAGE @endif
+                                <span class="text-[9px] font-black uppercase tracking-widest {{ $isLocked ? 'text-amber-500' : ($isFull ? 'text-red-500' : 'text-gray-500') }}">
+                                    @if($isLocked) 
+                                        INSCRIPTIONS VERROUILLÉES 
+                                    @elseif($isFull) 
+                                        INSCRIPTIONS BLOQUÉES 
+                                    @else 
+                                        REMPLISSAGE 
+                                    @endif
                                 </span>
-                                <span class="text-[10px] font-black {{ $isFull ? 'text-red-500' : 'text-white' }}">
+                                <span class="text-[10px] font-black {{ $isLocked ? 'text-amber-500' : ($isFull ? 'text-red-500' : 'text-white') }}">
                                     {{ $current }} / {{ $max }} ({{ $percentage }}%)
                                 </span>
                             </div>
                             <div class="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
-                                <div class="h-full transition-all duration-1000 {{ $isFull ? 'bg-red-600' : 'bg-indigo-600' }}" 
+                                <div class="h-full transition-all duration-1000 {{ $isLocked ? 'bg-amber-500' : ($isFull ? 'bg-red-600' : 'bg-indigo-600') }}" 
                                      style="width: {{ $percentage }}%"></div>
                             </div>
                         </div>
 
-                        {{-- LISTE DES JOUEURS DÉJÀ INSCRITS --}}
+                        {{-- LISTE DES JOUEURS DE L'ÉQUIPE DÉJÀ INSCRITS --}}
                         <div class="flex flex-wrap gap-2 mb-8 min-h-[32px]">
                             @php
                                 $teamIds = auth()->user()->students->pluck('id')->push(auth()->id());
@@ -92,11 +106,12 @@
                             @endforeach
                         </div>
 
+                        {{-- Formulaire d'inscription --}}
                         <form action="{{ route('coach.register_player') }}" method="POST" class="mt-auto pt-6 border-t border-white/5">
                             @csrf
                             <input type="hidden" name="sub_table_id" value="{{ $table->id }}">
                             <div class="space-y-4">
-                                <select name="player_id" required {{ $isFull ? 'disabled' : '' }}
+                                <select name="player_id" required {{ ($isFull || $isLocked) ? 'disabled' : '' }}
                                         class="w-full bg-black border border-white/10 rounded-2xl px-5 py-4 text-white text-[10px] font-black uppercase tracking-widest focus:border-indigo-500 outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                                     <option value="" disabled selected>Choisir un joueur...</option>
                                     @if(auth()->user()->points <= $table->points_max)
@@ -113,7 +128,11 @@
                                     @endforeach
                                 </select>
 
-                                @if($isFull)
+                                @if($isLocked)
+                                    <div class="w-full bg-amber-500/10 border border-amber-500/20 text-amber-500 font-black uppercase text-[9px] tracking-widest py-5 rounded-2xl text-center">
+                                        <i class="fas fa-lock mr-2"></i> Inscriptions Fermées
+                                    </div>
+                                @elseif($isFull)
                                     <div class="w-full bg-red-500/10 border border-red-500/20 text-red-500 font-black uppercase text-[9px] tracking-widest py-5 rounded-2xl text-center">
                                         Tableau complet
                                     </div>

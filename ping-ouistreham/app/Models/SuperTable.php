@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class SuperTable extends Model
 {
@@ -17,50 +18,42 @@ class SuperTable extends Model
         'date', 
         'start_time', 
         'max_players', 
-        'description'
+        'description',
+        'is_locked' // Ajouté pour le verrouillage manuel
     ];
+
+    /**
+     * Casts des attributs.
+     */
+    protected $casts = [
+        'is_locked' => 'boolean',
+        'date' => 'date',
+    ];
+
+    /**
+     * Relation avec le tournoi.
+     */
     public function tournament(): BelongsTo
     {
         return $this->belongsTo(Tournament::class);
     }
 
+    /**
+     * Relation avec les sous-tables (tableaux de points).
+     */
     public function subTables(): HasMany
     {
         return $this->hasMany(SubTable::class);
     }
 
     /**
-     * Calcule le nombre total d'inscrits dans ce bloc (tous tableaux confondus)
+     * Accès direct aux inscriptions via les sous-tables.
      */
-    public function currentPlayersCount(): int
+    public function registrations(): HasManyThrough
     {
-        // On compte les inscriptions confirmées dans toutes les sous-tables de cette SuperTable
-        return Registration::whereIn('sub_table_id', $this->subTables()->pluck('id'))
-            ->where('status', 'confirmed')
-            ->count();
-    }
-
-    /**
-     * Vérifie si le bloc est plein
-     */
-    public function isFull()
-    {
-        $confirmedCount = \App\Models\Registration::whereHas('subTable', function($q) {
-            $q->where('super_table_id', $this->id);
-        })->where('status', 'confirmed')->count();
-
-        return $confirmedCount >= (int) $this->max_players;
-    }
-
-    // app/Models/SuperTable.php
-
-    public function registrations()
-    {
-        // Si tes inscriptions sont liées aux SubTables, 
-        // on utilise hasManyThrough pour y accéder depuis la SuperTable
         return $this->hasManyThrough(
-            \App\Models\Registration::class, 
-            \App\Models\SubTable::class,
+            Registration::class, 
+            SubTable::class,
             'super_table_id', // Clé étrangère sur SubTable
             'sub_table_id',   // Clé étrangère sur Registration
             'id',             // Clé locale sur SuperTable
@@ -68,5 +61,29 @@ class SuperTable extends Model
         );
     }
 
-    
+    /**
+     * Calcule le nombre total d'inscrits dans ce bloc (confirmés uniquement).
+     */
+    public function currentPlayersCount(): int
+    {
+        return $this->registrations()
+            ->where('status', 'confirmed')
+            ->count();
+    }
+
+    /**
+     * Vérifie si le bloc est plein.
+     */
+    public function isFull(): bool
+    {
+        return $this->currentPlayersCount() >= (int) $this->max_players;
+    }
+
+    /**
+     * Vérifie si le bloc est verrouillé par l'admin.
+     */
+    public function isLocked(): bool
+    {
+        return (bool) $this->is_locked;
+    }
 }

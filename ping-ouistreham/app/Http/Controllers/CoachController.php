@@ -83,7 +83,7 @@ class CoachController extends Controller
     }
 
     /**
-     * Inscription : Pas de liste d'attente. Bloqué si complet.
+     * Inscription : Pas de liste d'attente. Bloqué si complet ou VERROUILLÉ.
      */
     public function registerPlayer(Request $request)
     {
@@ -102,7 +102,12 @@ class CoachController extends Controller
             return back()->with('error', "Action non autorisée.");
         }
 
-        // 2. Vérification Capacité (Strictement bloqué si plein)
+        // 2. Vérification Verrouillage (NOUVEAU)
+        if ($superTable->is_locked) {
+            return back()->with('error', "La série {$superTable->label} est verrouillée par l'organisation. Inscriptions impossibles.");
+        }
+
+        // 2 bis. Vérification Capacité (Strictement bloqué si plein)
         $currentInscriptionsCount = $superTable->registrations->where('status', 'confirmed')->count();
         $limit = (int) $superTable->max_players;
 
@@ -154,7 +159,7 @@ class CoachController extends Controller
     }
 
     /**
-     * Désinscription.
+     * Désinscription (La désinscription reste possible même si le tableau est locked).
      */
     public function unregisterPlayer(Request $request)
     {

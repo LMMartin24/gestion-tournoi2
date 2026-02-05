@@ -46,7 +46,7 @@ class DashboardController extends Controller
     }
 
     /**
-     * Inscription classique (bloquée si plein).
+     * Inscription classique (bloquée si plein ou VERROUILLÉ).
      */
     public function register(Request $request, SubTable $subTable)
     {
@@ -54,13 +54,18 @@ class DashboardController extends Controller
         $superTable = $subTable->superTable;
         $tournament = $superTable->tournament;
 
-        // 1. Date limite
+        // 1. SÉCURITÉ : Date limite de clôture
         if (now()->gt($tournament->registration_deadline)) {
             $dateFormatted = Carbon::parse($tournament->registration_deadline)->format('d/m/Y H:i');
             return back()->with('error', "Trop tard ! Les inscriptions sont fermées depuis le $dateFormatted.");
         }
 
-        // 2. Limite de 2 tableaux
+        // 2. SÉCURITÉ : Vérification du statut verrouillé (NOUVEAU)
+        if ($superTable->is_locked) {
+            return back()->with('error', "Les inscriptions pour la série {$superTable->label} sont actuellement verrouillées par l'organisateur.");
+        }
+
+        // 3. LIMITE DE 2 TABLEAUX PAR TOURNOI
         $registrationsInThisTournament = Registration::where('user_id', $user->id)
             ->whereHas('subTable.superTable', function($q) use ($tournament) {
                 $q->where('tournament_id', $tournament->id);
@@ -70,12 +75,12 @@ class DashboardController extends Controller
             return back()->with('error', 'Tu es déjà inscrit à 2 tableaux pour ce tournoi.');
         }
 
-        // 3. Vérification des points
+        // 4. VÉRIFICATION DES POINTS
         if ($user->points > $subTable->points_max || $user->points < $subTable->points_min) {
             return back()->with('error', 'Ton classement (' . $user->points . ' pts) ne correspond pas à ce tableau.');
         }
 
-        // 4. Vérification du créneau (Série identique)
+        // 5. VÉRIFICATION DU CRÉNEAU (Une seule inscription par SuperTable)
         $alreadyInSlot = Registration::where('user_id', $user->id)
             ->whereHas('subTable', function($q) use ($superTable) {
                 $q->where('super_table_id', $superTable->id);
@@ -85,7 +90,7 @@ class DashboardController extends Controller
             return back()->with('error', 'Tu es déjà inscrit dans la série ' . $superTable->label . '.');
         }
 
-        // 5. CAPACITÉ : Blocage si plein
+        // 6. CAPACITÉ : Blocage si plein
         $totalConfirmed = Registration::whereHas('subTable', function($q) use ($superTable) {
                 $q->where('super_table_id', $superTable->id);
             })
@@ -98,12 +103,12 @@ class DashboardController extends Controller
             return back()->with('error', "Ce tableau est complet. L'organisation gère désormais la liste d'attente manuellement.");
         }
 
-        // 6. Découpage nom
+        // 7. Découpage du nom
         $nameParts = explode(' ', trim($user->name));
         $firstname = $nameParts[0];
         $lastname = count($nameParts) > 1 ? implode(' ', array_slice($nameParts, 1)) : '';
 
-        // 7. Création
+        // 8. CRÉATION DE L'INSCRIPTION
         try {
             $registration = Registration::create([
                 'user_id'          => $user->id,
@@ -113,7 +118,7 @@ class DashboardController extends Controller
                 'player_firstname' => $firstname,
                 'player_lastname'  => $lastname,
                 'player_points'    => $user->points,
-                'status'           => 'confirmed', // Toujours confirmé
+                'status'           => 'confirmed',
                 'priority'         => 'primary',
                 'registered_at'    => now(),
             ]);
@@ -124,12 +129,12 @@ class DashboardController extends Controller
 
         } catch (\Exception $e) {
             Log::error("Erreur inscription classique : " . $e->getMessage());
-            return back()->with('error', 'Une erreur technique est survenue.');
+            return back()->with('error', 'Une erreur technique est survenue lors de l\'inscription.');
         }
     }
 
     /**
-     * Désinscription (sans repêchage automatique).
+     * Désinscription (La désinscription reste autorisée même si locked).
      */
     public function unregister(SubTable $subTable)
     {
@@ -149,8 +154,8 @@ class DashboardController extends Controller
             
         } catch (\Exception $e) {
             Log::error("Erreur désinscription : " . $e->getMessage());
-            $registration->delete(); // On supprime quand même
-            return back()->with('success', 'Désinscription effectuée (erreur mail admin).');
+            $registration->delete(); 
+            return back()->with('success', 'Désinscription effectuée (erreur mail notification).');
         }
     }
 

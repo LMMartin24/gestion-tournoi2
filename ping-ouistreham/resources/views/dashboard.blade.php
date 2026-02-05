@@ -50,7 +50,13 @@
             @else
                 <div class="grid grid-cols-1 gap-4">
                     @foreach($myRegistrations as $registration)
-                        <div class="group bg-[#111] border border-white/5 p-6 rounded-2xl flex flex-col md:flex-row md:items-center justify-between hover:border-indigo-500/50 transition-all duration-300">
+                        @php $isLocked = $registration->subTable->superTable->is_locked; @endphp
+                        <div class="group bg-[#111] border {{ $isLocked ? 'border-amber-500/20' : 'border-white/5' }} p-6 rounded-2xl flex flex-col md:flex-row md:items-center justify-between hover:border-indigo-500/50 transition-all duration-300 relative overflow-hidden">
+                            
+                            @if($isLocked)
+                                <div class="absolute top-0 left-0 w-1 h-full bg-amber-500"></div>
+                            @endif
+
                             <div class="flex items-center gap-6">
                                 <div class="hidden sm:flex flex-col items-center justify-center bg-black/40 border border-white/5 px-4 py-2 rounded-xl min-w-[100px]">
                                     <span class="text-[8px] text-gray-500 font-black uppercase tracking-tighter">Série</span>
@@ -66,7 +72,11 @@
                                         @if($registration->status === 'confirmed')
                                             <span class="bg-green-500/10 text-green-500 text-[9px] font-black uppercase px-2 py-0.5 rounded-md border border-green-500/20">Confirmé</span>
                                         @else
-                                            <span class="bg-orange-500/10 text-orange-500 text-[9px] font-black uppercase px-2 py-0.5 rounded-md border border-orange-500/20">En attente (Modéré)</span>
+                                            <span class="bg-orange-500/10 text-orange-500 text-[9px] font-black uppercase px-2 py-0.5 rounded-md border border-orange-500/20">En attente</span>
+                                        @endif
+
+                                        @if($isLocked)
+                                            <span class="bg-amber-500/10 text-amber-500 text-[9px] font-black uppercase px-2 py-0.5 rounded-md border border-amber-500/20 italic">Verrouillé</span>
                                         @endif
                                     </div>
                                     
@@ -74,9 +84,7 @@
                                         <span class="text-white/60">{{ $registration->subTable->superTable->tournament->name }}</span>
                                         <span class="text-gray-800">/</span>
                                         <span class="flex items-center gap-1">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                            </svg>
+                                            <i class="far fa-clock"></i>
                                             Début : {{ \Carbon\Carbon::parse($registration->subTable->superTable->start_time)->format('H:i') }}
                                         </span>
                                     </div>
@@ -89,14 +97,21 @@
                                     <p class="text-2xl font-black text-white italic">{{ number_format($registration->subTable->entry_fee, 2) }}€</p>
                                 </div>
                                 
-                                <form action="{{ route('player.unregister', $registration->subTable->id) }}" method="POST" onsubmit="return confirm('Désinscription ?');">
-                                    @csrf @method('DELETE')
-                                    <button type="submit" class="bg-white/5 hover:bg-red-600 hover:text-white text-gray-500 p-4 rounded-xl transition-all border border-white/5">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                    </button>
-                                </form>
+                                {{-- Désinscription possible uniquement si non verrouillé --}}
+                                @if(!$isLocked)
+                                    <form action="{{ route('player.unregister', $registration->subTable->id) }}" method="POST" onsubmit="return confirm('Désinscription ?');">
+                                        @csrf @method('DELETE')
+                                        <button type="submit" class="bg-white/5 hover:bg-red-600 hover:text-white text-gray-500 p-4 rounded-xl transition-all border border-white/5">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                    </form>
+                                @else
+                                    <div class="bg-amber-500/10 p-4 rounded-xl border border-amber-500/20 text-amber-500 cursor-help" title="Inscriptions fermées par l'organisateur">
+                                        <i class="fas fa-lock"></i>
+                                    </div>
+                                @endif
                             </div>
                         </div>
                     @endforeach
@@ -105,13 +120,11 @@
                 <div class="mt-8 bg-indigo-600 p-6 rounded-2xl flex justify-between items-center shadow-2xl shadow-indigo-600/20 border border-white/10">
                     <div class="flex items-center gap-4">
                         <div class="p-3 bg-white/10 rounded-xl">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                            </svg>
+                            <i class="fas fa-wallet text-white text-xl"></i>
                         </div>
-                        <span class="font-black uppercase italic tracking-tighter text-lg">Total à régler sur place</span>
+                        <span class="font-black uppercase italic tracking-tighter text-lg text-white">Total à régler sur place</span>
                     </div>
-                    <span class="text-4xl font-[1000] italic">{{ number_format($totalToPay, 2) }}€</span>
+                    <span class="text-4xl font-[1000] italic text-white">{{ number_format($totalToPay, 2) }}€</span>
                 </div>
             @endif
         </div>
@@ -153,11 +166,18 @@
                             $max = (int) $subTable->superTable->max_players;
                             $current = $subTable->superTable->registrations->where('status', 'confirmed')->count();
                             $isFull = $current >= $max;
+                            $isLocked = $subTable->superTable->is_locked;
                             $percentage = $max > 0 ? round(($current / $max) * 100) : 0;
                         @endphp
 
-                        <div class="bg-[#111] border {{ $isFull ? 'border-red-500/30' : 'border-white/5' }} p-8 rounded-[2rem] hover:border-indigo-500/50 transition-all flex flex-col justify-between group relative overflow-hidden">
-                            @if($isFull)
+                        <div class="bg-[#111] border {{ $isLocked ? 'border-amber-500/30' : ($isFull ? 'border-red-500/30' : 'border-white/5') }} p-8 rounded-[2rem] hover:border-indigo-500/50 transition-all flex flex-col justify-between group relative overflow-hidden">
+                            
+                            {{-- Rubans d'état --}}
+                            @if($isLocked)
+                                <div class="absolute top-3 right-[-30px] bg-amber-500 text-black text-[7px] font-black py-1 px-8 transform rotate-45 uppercase tracking-tighter shadow-xl">
+                                    BLOQUÉ
+                                </div>
+                            @elseif($isFull)
                                 <div class="absolute top-3 right-[-30px] bg-red-600 text-white text-[7px] font-black py-1 px-8 transform rotate-45 uppercase tracking-tighter shadow-xl">
                                     COMPLET
                                 </div>
@@ -165,10 +185,10 @@
 
                             <div>
                                 <div class="flex justify-between items-start mb-2">
-                                    <h3 class="text-3xl font-[1000] uppercase italic leading-none group-hover:text-indigo-400 transition-colors">
+                                    <h3 class="text-3xl font-[1000] uppercase italic leading-none group-hover:text-indigo-400 transition-colors {{ $isLocked ? 'opacity-50' : '' }}">
                                         {{ $subTable->label }}
                                     </h3>
-                                    <span class="{{ $isFull ? 'text-red-500' : 'text-green-500' }} font-black italic text-lg">{{ number_format($subTable->entry_fee, 2) }}€</span>
+                                    <span class="{{ $isLocked ? 'text-amber-500' : ($isFull ? 'text-red-500' : 'text-green-500') }} font-black italic text-lg">{{ number_format($subTable->entry_fee, 2) }}€</span>
                                 </div>
                                 
                                 <div class="mb-4">
@@ -178,11 +198,13 @@
                                 {{-- Barre de remplissage --}}
                                 <div class="mb-6">
                                     <div class="flex justify-between text-[8px] font-black uppercase mb-1 tracking-widest">
-                                        <span class="{{ $isFull ? 'text-red-500' : 'text-gray-500' }}">{{ $isFull ? 'TABLEAU PLEIN' : 'Places disponibles' }}</span>
+                                        <span class="{{ $isLocked ? 'text-amber-500' : ($isFull ? 'text-red-500' : 'text-gray-500') }}">
+                                            @if($isLocked) INSCRIPTIONS FERMÉES @elseif($isFull) TABLEAU PLEIN @else Places disponibles @endif
+                                        </span>
                                         <span class="text-white">{{ $current }} / {{ $max }}</span>
                                     </div>
                                     <div class="w-full h-1 bg-white/5 rounded-full overflow-hidden">
-                                        <div class="h-full {{ $isFull ? 'bg-red-600' : 'bg-indigo-600' }} transition-all duration-700" style="width: {{ $percentage }}%"></div>
+                                        <div class="h-full {{ $isLocked ? 'bg-amber-500' : ($isFull ? 'bg-red-600' : 'bg-indigo-600') }} transition-all duration-700" style="width: {{ $percentage }}%"></div>
                                     </div>
                                 </div>
 
@@ -202,6 +224,10 @@
                                 <button disabled class="w-full bg-white/5 text-gray-600 font-[1000] py-4 rounded-2xl uppercase tracking-widest text-xs cursor-not-allowed border border-white/5">
                                     Limite atteinte
                                 </button>
+                            @elseif($isLocked)
+                                <div class="w-full bg-amber-500/10 border border-amber-500/20 text-amber-500 font-black uppercase text-[10px] tracking-widest py-4 rounded-2xl text-center">
+                                    Indisponible
+                                </div>
                             @elseif($isFull)
                                 <div class="w-full bg-red-500/10 border border-red-500/20 text-red-500 font-black uppercase text-[10px] tracking-widest py-4 rounded-2xl text-center">
                                     Plus de place
