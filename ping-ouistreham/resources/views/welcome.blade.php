@@ -53,8 +53,8 @@
                         Créer un compte coach
                     </a>
                 @else
-                    <a href="{{ route('coach.dashboard') }}" class="text-center border-2 border-white/30 text-white font-[900] py-5 md:py-6 px-10 md:px-12 rounded-full uppercase tracking-[0.2em] text-xs md:text-sm hover:bg-white/10 transition-all">
-                        Mon Espace Coach
+                    <a href="{{ route('dashboard') }}" class="text-center border-2 border-white/30 text-white font-[900] py-5 md:py-6 px-10 md:px-12 rounded-full uppercase tracking-[0.2em] text-xs md:text-sm hover:bg-white/10 transition-all">
+                        Mon Espace
                     </a>
                 @endguest
             </div>
